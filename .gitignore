@@ -1,0 +1,22 @@
+# Entorno virtual de Python
+venv/
+__pycache__/
+*.pyc
+
+# Resultados de auditorias (pueden contener datos sensibles del objetivo auditado)
+resultados/
+*.log
+
+# Configuracion con datos sensibles (API keys, URLs de objetivos reales)
+config.yaml
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp
+
+# Node (si usas herramientas de generacion de reportes/diagramas)
+node_modules/
