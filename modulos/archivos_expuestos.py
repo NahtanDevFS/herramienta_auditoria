@@ -1,5 +1,5 @@
 """
-archivos_expuestos.py  (modulo de deteccion - A05: Security Misconfiguration)
+archivos_expuestos.py  (modulo de deteccion - A02: Security Misconfiguration)
 Busca archivos y directorios sensibles que no deberian ser accesibles
 publicamente. Por cada uno que responda como accesible, genera un Hallazgo.
 
@@ -283,7 +283,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         # Si llegamos aqui, es un hallazgo real.
         hallazgos.append(Hallazgo(
             titulo=item["titulo"],
-            categoria="A05",
+            categoria="A02",
             severidad=item["severidad"],
             descripcion=item["descripcion"],
             cvss=item["cvss"],
@@ -308,7 +308,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         if any(indicio in contenido for indicio in INDICIOS_LISTADO):
             hallazgos.append(Hallazgo(
                 titulo=f"Listado de directorio habilitado: {directorio}",
-                categoria="A05",
+                categoria="A02",
                 severidad="media",
                 descripcion=(
                     f"El directorio '{directorio}' muestra el listado de su "

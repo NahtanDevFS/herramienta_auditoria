@@ -1,5 +1,5 @@
 """
-nmap.py  (modulo de deteccion - A05: Security Misconfiguration)
+nmap.py  (modulo de deteccion - A02: Security Misconfiguration)
 Escanea los puertos abiertos del objetivo e identifica los servicios que corren
 en ellos. Un puerto innecesariamente expuesto amplia la superficie de ataque,
 por eso encaja en A05 (mala configuracion).
@@ -234,7 +234,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
     hallazgos.append(Hallazgo(
         titulo=f"Puertos abiertos detectados ({len(puertos)})",
-        categoria="A05",
+        categoria="A02",
         severidad="informativa",
         descripcion=(
             "Inventario de los puertos abiertos y los servicios detectados en "
@@ -268,7 +268,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
         hallazgos.append(Hallazgo(
             titulo=f"Servicio de riesgo expuesto: {nombre} (puerto {num})",
-            categoria="A05",
+            categoria="A02",
             severidad=severidad,
             descripcion=(
                 f"El puerto {num} ({nombre}) esta abierto y accesible. {motivo}"

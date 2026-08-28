@@ -1,5 +1,5 @@
 """
-autenticacion.py  (modulo de deteccion - A07: Identification and Authentication Failures)
+autenticacion.py  (modulo de deteccion - A07: Authentication Failures)
 Analiza la POSTURA de seguridad de la autenticacion del objetivo, SIN realizar
 fuerza bruta real. En lugar de martillar el login con miles de contraseñas
 (agresivo, ineficaz y eticamente cuestionable), este modulo comprueba si

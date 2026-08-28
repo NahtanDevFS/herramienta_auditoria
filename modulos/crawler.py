@@ -1,5 +1,5 @@
 """
-crawler.py  (modulo de reconocimiento - Recon / base para A03)
+crawler.py  (modulo de reconocimiento - Recon / base para A05)
 Rastrea el sitio objetivo siguiendo enlaces internos para descubrir:
   - Rutas / paginas (el "mapa" del sitio).
   - Formularios (posibles puntos de entrada de datos).
@@ -297,7 +297,7 @@ def _construir_hallazgos(objetivo, rutas, formularios, urls_param, logger):
 
         hallazgos.append(Hallazgo(
             titulo=f"URLs con parametros: {len(urls_param)}",
-            categoria="A03",
+            categoria="A05",
             severidad="informativa",
             descripcion=(
                 "URLs con parametros de entrada. Son los principales candidatos "

@@ -1,5 +1,5 @@
 """
-cookies.py  (modulo de deteccion - A02: Cryptographic Failures)
+cookies.py  (modulo de deteccion - A04: Cryptographic Failures)
 Revisa las cookies que envia la web y comprueba que tengan los flags de
 seguridad recomendados. Por cada cookie con un flag ausente o mal puesto,
 genera un Hallazgo.
@@ -43,7 +43,7 @@ def _analizar_cookie(cookie, objetivo: str) -> list[Hallazgo]:
     if not cookie.secure:
         hallazgos.append(Hallazgo(
             titulo=f"Cookie sin flag Secure: {nombre}",
-            categoria="A02",
+            categoria="A04",
             severidad="media",
             descripcion=(
                 f"La cookie '{nombre}' no tiene el flag Secure, por lo que "
@@ -68,7 +68,7 @@ def _analizar_cookie(cookie, objetivo: str) -> list[Hallazgo]:
     if not tiene_httponly:
         hallazgos.append(Hallazgo(
             titulo=f"Cookie sin flag HttpOnly: {nombre}",
-            categoria="A02",
+            categoria="A04",
             severidad="media",
             descripcion=(
                 f"La cookie '{nombre}' no tiene el flag HttpOnly, por lo que "
@@ -97,7 +97,7 @@ def _analizar_cookie(cookie, objetivo: str) -> list[Hallazgo]:
     if samesite is None:
         hallazgos.append(Hallazgo(
             titulo=f"Cookie sin atributo SameSite: {nombre}",
-            categoria="A02",
+            categoria="A04",
             severidad="baja",
             descripcion=(
                 f"La cookie '{nombre}' no define el atributo SameSite. Sin el, "
@@ -118,7 +118,7 @@ def _analizar_cookie(cookie, objetivo: str) -> list[Hallazgo]:
         # opcion mas permisiva: la señalamos como informativa.
         hallazgos.append(Hallazgo(
             titulo=f"Cookie con SameSite=None: {nombre}",
-            categoria="A02",
+            categoria="A04",
             severidad="informativa",
             descripcion=(
                 f"La cookie '{nombre}' usa SameSite=None, el valor mas "

@@ -348,15 +348,15 @@ if __name__ == "__main__":
             "critica": 1, "alta": 0, "media": 1, "baja": 1, "informativa": 0
         },
         "hallazgos": [
-            {"titulo": "Inyeccion SQL en login", "categoria": "A03:2021 - Injection",
+            {"titulo": "Inyeccion SQL en login", "categoria": "A05:2025 - Injection",
              "severidad": "critica", "cvss": 9.8, "descripcion": "SQLi detectada.",
              "evidencia": "id=1 AND 1=1", "recomendacion": "Usar consultas parametrizadas.",
              "herramienta_origen": "modulo_sqlmap", "url_afectada": "https://ejemplo.local/login"},
-            {"titulo": "Falta CSP", "categoria": "A05:2021 - Security Misconfiguration",
+            {"titulo": "Falta CSP", "categoria": "A02:2025 - Security Misconfiguration",
              "severidad": "media", "cvss": 5.3, "descripcion": "Sin Content-Security-Policy.",
              "evidencia": "Sin cabecera CSP", "recomendacion": "Añadir CSP.",
              "herramienta_origen": "modulo_cabeceras_http", "url_afectada": "https://ejemplo.local/"},
-            {"titulo": "Cookie sin HttpOnly", "categoria": "A02:2021 - Cryptographic Failures",
+            {"titulo": "Cookie sin HttpOnly", "categoria": "A04:2025 - Cryptographic Failures",
              "severidad": "baja", "cvss": 3.1, "descripcion": "Cookie insegura.",
              "evidencia": "sessionid sin HttpOnly", "recomendacion": "Añadir HttpOnly.",
              "herramienta_origen": "modulo_cookies", "url_afectada": "https://ejemplo.local/"},

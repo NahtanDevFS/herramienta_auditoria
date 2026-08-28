@@ -1,5 +1,5 @@
 """
-tls_ssl.py  (modulo de deteccion - A02: Cryptographic Failures)
+tls_ssl.py  (modulo de deteccion - A04: Cryptographic Failures)
 Analiza la configuracion TLS/SSL del objetivo usando la libreria sslyze.
 Detecta los problemas criptograficos mas comunes:
 
@@ -142,7 +142,7 @@ def _revisar_protocolos(attempts, objetivo: str, logger) -> list[Hallazgo]:
         if aceptadas:
             hallazgos.append(Hallazgo(
                 titulo=f"Protocolo obsoleto habilitado: {nombre}",
-                categoria="A02",
+                categoria="A04",
                 severidad=severidad,
                 descripcion=(
                     f"El servidor acepta conexiones mediante {nombre}, un "
@@ -215,7 +215,7 @@ def _revisar_certificado(attempts, hostname, objetivo, logger) -> list[Hallazgo]
                 "Validacion fallida en todos los trust stores."
             hallazgos.append(Hallazgo(
                 titulo="Certificado TLS no confiable",
-                categoria="A02",
+                categoria="A04",
                 severidad="alta",
                 descripcion=(
                     "El certificado del servidor no pudo validarse contra los "
@@ -250,7 +250,7 @@ def _revisar_certificado(attempts, hostname, objetivo, logger) -> list[Hallazgo]
     if not _hostname_coincide(leaf, hostname):
         hallazgos.append(Hallazgo(
             titulo="El certificado no coincide con el hostname",
-            categoria="A02",
+            categoria="A04",
             severidad="alta",
             descripcion=(
                 f"El certificado presentado no incluye el hostname '{hostname}' "
@@ -276,7 +276,7 @@ def _revisar_certificado(attempts, hostname, objetivo, logger) -> list[Hallazgo]
     if dias_restantes < 0:
         hallazgos.append(Hallazgo(
             titulo="Certificado TLS caducado",
-            categoria="A02",
+            categoria="A04",
             severidad="alta",
             descripcion=(
                 f"El certificado caduco hace {abs(dias_restantes)} dia(s). "
@@ -292,7 +292,7 @@ def _revisar_certificado(attempts, hostname, objetivo, logger) -> list[Hallazgo]
     elif dias_restantes < DIAS_AVISO_CADUCIDAD:
         hallazgos.append(Hallazgo(
             titulo="Certificado TLS proximo a caducar",
-            categoria="A02",
+            categoria="A04",
             severidad="baja",
             descripcion=(
                 f"El certificado caduca en {dias_restantes} dia(s). Conviene "
@@ -310,7 +310,7 @@ def _revisar_certificado(attempts, hostname, objetivo, logger) -> list[Hallazgo]
     if dep.verified_chain_has_sha1_signature:
         hallazgos.append(Hallazgo(
             titulo="Cadena de certificados con firma SHA-1",
-            categoria="A02",
+            categoria="A04",
             severidad="media",
             descripcion=(
                 "La cadena de certificados usa el algoritmo de firma SHA-1, "

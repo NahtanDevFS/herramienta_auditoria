@@ -1,5 +1,5 @@
 """
-cabeceras_http.py  (modulo de deteccion - A05: Security Misconfiguration)
+cabeceras_http.py  (modulo de deteccion - A02: Security Misconfiguration)
 Revisa las cabeceras HTTP de seguridad que debe enviar un servidor web bien
 configurado. Por cada cabecera recomendada que falte (o este mal puesta),
 genera un objeto Hallazgo.
@@ -170,7 +170,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         if nombre not in cabeceras_presentes:
             hallazgos.append(Hallazgo(
                 titulo=f"Falta la cabecera de seguridad: {nombre}",
-                categoria="A05",
+                categoria="A02",
                 severidad=info["severidad"],
                 descripcion=info["descripcion"],
                 cvss=info["cvss"],

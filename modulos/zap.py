@@ -1,5 +1,5 @@
 """
-zap.py  (modulo de deteccion - A03: Injection, y otros)
+zap.py  (modulo de deteccion - A01, A04, A05, A02, A06, A07 y otros)
 Integra OWASP ZAP, el escaner web de referencia de OWASP, para detectar
 vulnerabilidades activas como XSS, inyecciones, y muchas otras.
 
@@ -58,26 +58,26 @@ MAPA_RIESGO = {
 def _categoria_desde_alerta(nombre: str) -> str:
     n = nombre.lower()
     if any(k in n for k in ["sql injection", "sqli"]):
-        return "A03"
+        return "A05"
     if any(k in n for k in ["cross site scripting", "xss"]):
-        return "A03"
+        return "A05"
     if any(k in n for k in ["injection", "command", "code inject", "xxe", "ldap"]):
-        return "A03"
+        return "A05"
     if any(k in n for k in ["ssrf", "server side request"]):
-        return "A10"
+        return "A01"
     if any(k in n for k in ["path traversal", "directory", "remote file"]):
         return "A01"
     if any(k in n for k in ["authentication", "session", "cookie", "login"]):
         return "A07"
     if any(k in n for k in ["csp", "header", "clickjack", "x-frame",
                             "content type", "cache"]):
-        return "A05"
-    if any(k in n for k in ["tls", "ssl", "certificate", "cipher", "https"]):
         return "A02"
+    if any(k in n for k in ["tls", "ssl", "certificate", "cipher", "https"]):
+        return "A04"
     if any(k in n for k in ["outdated", "vulnerable js", "version"]):
-        return "A06"
+        return "A03"
     # Por defecto, la mayoria de alertas de ZAP son de mala configuracion.
-    return "A05"
+    return "A02"
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:

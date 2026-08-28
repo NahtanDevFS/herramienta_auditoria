@@ -1,5 +1,5 @@
 """
-tecnologias.py  (modulo de deteccion - A06: Vulnerable and Outdated Components)
+tecnologias.py  (modulo de deteccion - A03: Software Supply Chain Failures)
 Identifica las tecnologias que usa la web (servidor, lenguaje, framework, CMS,
 librerias JS) y, cuando es posible, sus VERSIONES.
 
@@ -112,7 +112,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
         hallazgos.append(Hallazgo(
             titulo="Inventario de tecnologias detectadas",
-            categoria="A06",
+            categoria="A03",
             severidad="informativa",
             descripcion=(
                 "Se identificaron las siguientes tecnologias en el objetivo. "
@@ -200,7 +200,7 @@ def _analizar_cabeceras(resp, objetivo, inventario, logger) -> list[Hallazgo]:
         if tiene_version:
             hallazgos.append(Hallazgo(
                 titulo=f"Version de software expuesta en cabecera {cabecera}",
-                categoria="A06",
+                categoria="A03",
                 severidad="baja",
                 descripcion=(
                     f"La cabecera HTTP '{cabecera}' revela la version del "

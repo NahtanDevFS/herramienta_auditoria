@@ -1,5 +1,5 @@
 """
-nuclei.py  (modulo de deteccion - A06/A10 y otros)
+nuclei.py  (modulo de deteccion - A05, A02, A03, A07, A01, A10 y otros)
 Envuelve la herramienta externa Nuclei (https://github.com/projectdiscovery/nuclei),
 un escaner basado en miles de plantillas que detecta vulnerabilidades conocidas
 (CVE), malas configuraciones, exposiciones y tecnologias.
@@ -65,17 +65,17 @@ def _categoria_desde_tags(tags: list[str], tiene_cve: bool) -> str:
     tags_lower = {t.lower() for t in tags}
 
     if tags_lower & {"sqli", "xss", "rce", "injection", "lfi", "ssti", "cmdi"}:
-        return "A03"  # Injection
+        return "A05"  # Injection
     if tags_lower & {"ssrf"}:
-        return "A10"  # SSRF
+        return "A01"  # Broken Access Control (incluye SSRF en 2025)
     if tags_lower & {"misconfig", "exposure", "config", "default-login"}:
-        return "A05"  # Security Misconfiguration
+        return "A02"  # Security Misconfiguration
     if tags_lower & {"auth", "default-login", "weak-auth"}:
-        return "A07"  # Auth failures
+        return "A07"  # Authentication Failures
     if tiene_cve or (tags_lower & {"cve", "tech", "wordpress", "wp-plugin"}):
-        return "A06"  # Vulnerable components
+        return "A03"  # Software Supply Chain Failures
     # Por defecto, lo tratamos como mala configuracion.
-    return "A05"
+    return "A02"
 
 
 def _localizar_binario(logger) -> str | None:

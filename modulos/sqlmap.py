@@ -1,5 +1,5 @@
 """
-sqlmap.py  (modulo de deteccion - A03: Injection)
+sqlmap.py  (modulo de deteccion - A05: Injection)
 Envuelve sqlmap para detectar vulnerabilidades de inyeccion SQL en URLs con
 parametros. Es el modulo mas intrusivo del proyecto: sqlmap NO solo observa,
 sino que ATACA activamente enviando payloads de inyeccion SQL reales.
@@ -223,7 +223,7 @@ def _parsear_salida(salida: str, url: str, logger):
 
     return Hallazgo(
         titulo=f"Inyeccion SQL en el parametro '{parametro}'",
-        categoria="A03",
+        categoria="A05",
         severidad="critica",
         descripcion=descripcion,
         cvss=9.8,  # SQLi explotable es de las mas graves
