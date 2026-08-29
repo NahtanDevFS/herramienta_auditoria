@@ -35,6 +35,7 @@ ORDEN_MODULOS = [
     ("zap", "zap"),
     ("metodos_http", "metodos_http"),
     ("autenticacion", "autenticacion"),
+    ("agente_ia", "agente_pentesting"),
 ]
 
 
@@ -71,6 +72,11 @@ def ejecutar_auditoria(config: dict, logger: logging.Logger,
         # Antes de sqlmap, pasarle las URLs con parametros del crawler.
         if nombre_modulo == "sqlmap":
             _alimentar_sqlmap_con_crawler(config, logger)
+
+        # Antes del agente de IA, pasarle los hallazgos ya acumulados para
+        # que pueda leerlos con la tool leer_hallazgo_previo.
+        if nombre_modulo == "agente_pentesting":
+            config["_hallazgos_previos"] = [h.to_dict() for h in reporte.hallazgos]
 
         logger.info(f"Ejecutando modulo: {nombre_modulo}")
         try:

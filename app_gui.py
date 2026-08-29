@@ -45,20 +45,20 @@ COLOR_NIVEL = {
 
 # Descripcion de cada modulo para mostrar en la interfaz.
 MODULOS_INFO = {
-    "cabeceras_http": ("Cabeceras HTTP (A05)", "Revisa cabeceras de seguridad."),
-    "cookies": ("Cookies (A02)", "Flags Secure, HttpOnly, SameSite."),
-    "tls_ssl": ("TLS/SSL (A02)", "Certificado y protocolos."),
-    "archivos_expuestos": ("Archivos expuestos (A05)", ".git, .env, backups."),
-    "tecnologias": ("Tecnologias (A06)", "Stack y versiones."),
+    "cabeceras_http": ("Cabeceras HTTP (A02)", "Revisa cabeceras de seguridad."),
+    "cookies": ("Cookies (A04)", "Flags Secure, HttpOnly, SameSite."),
+    "tls_ssl": ("TLS/SSL (A04)", "Certificado y protocolos."),
+    "archivos_expuestos": ("Archivos expuestos (A02)", ".git, .env, backups."),
+    "tecnologias": ("Tecnologias (A03)", "Stack y versiones."),
     "nuclei": ("Nuclei (varios)", "Escaneo por plantillas/CVE."),
-    "puertos_nmap": ("Nmap (A05)", "Puertos y servicios."),
+    "puertos_nmap": ("Nmap (A02)", "Puertos y servicios."),
     "crawler": ("Crawler (recon)", "Rutas, formularios, parametros."),
-    "sqlmap": ("SQLmap (A03)", "Inyeccion SQL (requiere URLs)."),
+    "sqlmap": ("SQLmap (A05)", "Inyeccion SQL (requiere URLs)."),
     "zap": ("OWASP ZAP (varios)", "Escaneo activo XSS/injection."),
     "metodos_http": ("Metodos HTTP (A01)", "PUT/DELETE/TRACE, traversal."),
     "autenticacion": ("Autenticacion (A07)", "Rate limiting, sesion."),
+    "agente_ia": ("Agente de IA (A01/A05)", "Analisis contextual con LLM (Gemini)."),
 }
-
 
 def configurar_logger():
     """Logger que ademas acumula los mensajes para mostrarlos en la GUI."""
@@ -101,8 +101,9 @@ with st.sidebar:
 
     modulos_activos = {}
     for clave, (titulo, desc) in MODULOS_INFO.items():
-        # Por defecto activamos los ligeros; los pesados (zap, nmap, sqlmap) no.
-        default = clave not in ("zap", "nmap", "sqlmap", "puertos_nmap")
+        # Por defecto activamos los ligeros; los pesados (zap, nmap, sqlmap,
+        # agente_ia) no.
+        default = clave not in ("zap", "nmap", "sqlmap", "puertos_nmap", "agente_ia")
         modulos_activos[clave] = st.checkbox(
             titulo, value=st.session_state.get(f"mod_{clave}", default),
             key=f"mod_{clave}", help=desc,
@@ -116,6 +117,33 @@ with st.sidebar:
         "Ruta a zap.sh (si usas ZAP)",
         value=os.path.expanduser("~/proyectos/ZAP_2.17.0/zap.sh"),
     )
+
+    # --- Configuracion del agente de IA (solo si esta activado) ---
+    gemini_api_key = ""
+    limite_acciones_agente = 20
+    timeout_agente = 600
+    if modulos_activos.get("agente_ia"):
+        st.divider()
+        st.subheader("Agente de IA (Gemini)")
+        gemini_api_key = st.text_input(
+            "API key de Gemini",
+            value=os.environ.get("GEMINI_API_KEY", ""),
+            type="password",
+            help="Se puede dejar vacio si GEMINI_API_KEY ya esta en el entorno.",
+        )
+        limite_acciones_agente = st.number_input(
+            "Limite de acciones por sesion", min_value=1, max_value=50,
+            value=20,
+        )
+        timeout_agente = st.number_input(
+            "Timeout de sesion (segundos)", min_value=60, max_value=1800,
+            value=600, step=60,
+        )
+        st.caption(
+            "El agente solo puede actuar dentro del dominio del objetivo, "
+            "no ejecuta metodos destructivos y se detiene al llegar al "
+            "limite de acciones o al timeout, lo que ocurra primero."
+        )
 
     st.divider()
     autorizado = st.checkbox(
@@ -158,6 +186,13 @@ if lanzar:
                 "timeout_spider": 300, "timeout_ascan": 900},
         "crawler": {"max_paginas": 50, "max_profundidad": 3},
         "sqlmap": {"urls": [], "level": 1, "risk": 1, "timeout": 180},
+        "agente_ia": {
+            "activo": modulos_activos.get("agente_ia", False),
+            "api_key": gemini_api_key,
+            "modelo": "gemini-2.5-flash",
+            "limite_acciones": limite_acciones_agente,
+            "timeout_sesion_seg": timeout_agente,
+        },
     }
 
     logger = configurar_logger()

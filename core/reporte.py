@@ -182,21 +182,21 @@ if __name__ == "__main__":
     # comprobar que el reporte los ordena por severidad).
     rep.agregar(Hallazgo(
         titulo="Cabecera CSP ausente",
-        categoria="A05",
+        categoria="A02",
         severidad="media",
         descripcion="No se envia Content-Security-Policy.",
         cvss=5.3,
     ))
     rep.agregar(Hallazgo(
         titulo="SQL Injection en formulario de login",
-        categoria="A03",
+        categoria="A05",
         severidad="critica",
         descripcion="El parametro 'usuario' es vulnerable a inyeccion SQL.",
         cvss=9.8,
     ))
     rep.agregar(Hallazgo(
         titulo="Cookie sin flag HttpOnly",
-        categoria="A02",
+        categoria="A04",
         severidad="baja",
         descripcion="La cookie de sesion no tiene el flag HttpOnly.",
         cvss=3.1,

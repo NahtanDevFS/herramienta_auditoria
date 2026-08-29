@@ -18,5 +18,6 @@ Thumbs.db
 .vscode/
 *.swp
 
-# Node (si usas herramientas de generacion de reportes/diagramas)
 node_modules/
+
+*.env
