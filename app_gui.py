@@ -1,32 +1,15 @@
-"""
-app_gui.py  (interfaz grafica - Fase 7)
----------------------------------------
-Interfaz web con Streamlit para la herramienta de auditoria. Permite:
-  - Configurar el objetivo y confirmar la autorizacion.
-  - Activar/desactivar modulos con checkboxes.
-  - Lanzar la auditoria y ver el progreso.
-  - Visualizar los resultados: valoracion de riesgo, matriz, y hallazgos.
-  - Descargar el informe (JSON, HTML, PDF).
-
-Se ejecuta con:
-    streamlit run app_gui.py
-
-No sustituye a main.py (la CLI); ambos usan la misma logica de core/auditoria.py.
-"""
-
 import logging
 import os
 from datetime import datetime
 
 import streamlit as st
+from dotenv import load_dotenv
 
 from auditoria import ejecutar_auditoria
 from core.reporte_html import generar as generar_informe
 
+load_dotenv()
 
-# ---------------------------------------------------------------------------
-# Configuracion de la pagina
-# ---------------------------------------------------------------------------
 st.set_page_config(
     page_title="Auditoria de Seguridad Web",
     page_icon="[S]",
