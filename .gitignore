@@ -10,6 +10,13 @@ resultados/
 # Configuracion con datos sensibles (API keys, URLs de objetivos reales)
 config.yaml
 
+# Modelo entrenado: NO va al repo (pesa GBs, GitHub rechaza >100MB).
+# Se distribuye aparte (Ollama registry o Hugging Face) — ver README.
+*.gguf
+
+# Respaldo del adaptador LoRA: no lo necesita quien instala la herramienta.
+pentest_lora_adapter/
+
 # Archivos de sistema
 .DS_Store
 Thumbs.db

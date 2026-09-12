@@ -1,0 +1,72 @@
+# =============================================================================
+# docker-compose.yml
+# Levanta TODO con un comando:   docker compose up --build
+#   - ollama:       servidor del modelo local
+#   - model-loader: carga tu modelo fine-tuneado en Ollama (una sola vez)
+#   - app:          la herramienta de auditoria (interfaz web en :8501)
+# =============================================================================
+services:
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: auditoria_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # --- GPU (opcional) --------------------------------------------------
+    # Si tienes GPU NVIDIA + nvidia-container-toolkit, descomenta esto para
+    # que la inferencia sea mucho mas rapida:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    restart: unless-stopped
+
+  # Carga el modelo en Ollama una sola vez y termina.
+  model-loader:
+    image: ollama/ollama:latest
+    container_name: auditoria_model_loader
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    # OPCION A (recomendada para compartir): el modelo esta publicado en el
+    # registro de Ollama. Cambia el nombre por el tuyo (ver README).
+    entrypoint: >
+      sh -c "sleep 5 &&
+             ollama pull ${OLLAMA_MODEL:-tu_usuario/pentest-owasp} &&
+             echo 'Modelo cargado.'"
+    # OPCION B (modelo local, sin publicar): monta el GGUF + Modelfile y usa
+    # 'ollama create'. Comenta el entrypoint de arriba y descomenta esto:
+    # volumes:
+    #   - ./modelo:/modelo:ro
+    # entrypoint: >
+    #   sh -c "sleep 5 &&
+    #          ollama create pentest-owasp -f /modelo/Modelfile &&
+    #          echo 'Modelo creado desde GGUF local.'"
+    restart: "no"
+
+  app:
+    build: .
+    container_name: auditoria_app
+    depends_on:
+      - ollama
+    environment:
+      # El agente lee estas variables si no estan en config.yaml.
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-pentest-owasp}
+    ports:
+      - "8501:8501"
+    volumes:
+      # Persiste los reportes fuera del contenedor.
+      - ./resultados:/app/resultados
+      # Tu config.yaml (crealo desde config.yaml.example antes de levantar).
+      - ./config.yaml:/app/config.yaml:ro
+    restart: unless-stopped
+
+volumes:
+  ollama_data:

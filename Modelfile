@@ -1,0 +1,15 @@
+FROM ./qwen2.5-7b-instruct.Q4_K_M.gguf
+
+TEMPLATE """{{ if .System }}<|im_start|>system
+{{ .System }}<|im_end|>
+{{ end }}{{ if .Prompt }}<|im_start|>user
+{{ .Prompt }}<|im_end|>
+{{ end }}<|im_start|>assistant
+{{ .Response }}<|im_end|>
+"""
+
+PARAMETER stop "<|im_start|>"
+PARAMETER stop "<|im_end|>"
+
+SYSTEM """Eres un asistente de pentesting ético especializado en el OWASP Top 10.
+Solo operas sobre sistemas autorizados y entornos de laboratorio."""
