@@ -2,26 +2,31 @@
 crawler.py  (modulo de reconocimiento - Recon / base para A05)
 
 Rastrea el sitio objetivo para descubrir rutas, formularios y parametros.
-AHORA renderiza JavaScript con Playwright (motor de navegador real), de modo
-que funciona con aplicaciones de una sola pagina (SPAs: Angular, React, Vue),
-donde el HTML crudo esta vacio y todo lo pinta el navegador. Si Playwright no
-esta disponible, cae a un rastreo HTTP clasico (requests + BeautifulSoup).
+El rastreo con RENDERIZADO DE JAVASCRIPT (Playwright) se ejecuta en un
+SUBPROCESO aparte (modulos/crawler_worker.py), porque Playwright sincrono no
+puede correr dentro del bucle de asyncio de Streamlit. El worker escribe su
+resultado en un JSON temporal que este modulo lee.
+
+Si el subproceso falla o Playwright no esta, cae a un rastreo HTTP clasico
+(requests + BeautifulSoup), que en SPAs vera poco pero no rompe.
 
 Valor:
-  1. Hallazgos informativos: mapa del sitio, formularios y URLs con parametros.
-  2. Lista de URLs con parametros para sqlmap (archivo urls_con_parametros.txt).
-  3. Un MAPA ESTRUCTURADO (config["_mapa_sitio"]) que el agente de IA usa como
-     contexto: paginas concretas con login, buscador o parametros, para que
-     razone sobre una superficie real en vez de explorar a ciegas.
+  1. Hallazgos informativos: mapa del sitio, formularios, URLs con parametros.
+  2. urls_con_parametros.txt para sqlmap.
+  3. config["_mapa_sitio"]: mapa estructurado que el agente de IA usa de contexto.
 
 Patron de siempre:  def ejecutar(config, logger) -> list[Hallazgo]
 """
 
+import json
 import logging
 import os
+import subprocess
+import sys
+import tempfile
 import time
 from collections import deque
-from urllib.parse import urljoin, urlparse, urldefrag, urlunparse
+from urllib.parse import urljoin, urlparse, urldefrag
 
 from core.modelo_hallazgo import Hallazgo
 
@@ -30,47 +35,13 @@ ORIGEN = "modulo_crawler"
 MAX_PAGINAS_DEFECTO = 50
 MAX_PROFUNDIDAD_DEFECTO = 3
 PAUSA_ENTRE_PETICIONES = 0.2
+TIMEOUT_WORKER_SEG = 300
 
 EXTENSIONES_IGNORAR = {
     ".jpg", ".jpeg", ".png", ".gif", ".svg", ".ico", ".webp",
     ".css", ".js", ".pdf", ".zip", ".tar", ".gz", ".mp4", ".mp3",
     ".woff", ".woff2", ".ttf", ".eot",
 }
-
-# Rutas comunes que un pentester prueba en CUALQUIER sitio (no es conocimiento
-# especifico del objetivo). Incluye variantes hash para SPAs.
-RUTAS_COMUNES = [
-    "/login", "/signin", "/admin", "/administrator", "/administration",
-    "/search", "/account", "/user", "/dashboard", "/register", "/api",
-    "/#/login", "/#/search", "/#/administration", "/#/register", "/#/basket",
-]
-
-# JS que extrae la superficie de la pagina YA RENDERIZADA.
-JS_EXTRAER = """
-() => {
-  const abs = (h) => { try { return new URL(h, location.href).href; } catch(e){ return ''; } };
-  const forms = [...document.querySelectorAll('form')].slice(0,20).map(f => {
-    const campos = [...f.querySelectorAll('input,textarea,select')]
-      .map(el => ({nombre: el.name||el.id||el.getAttribute('placeholder')||'',
-                   tipo: (el.type||el.tagName||'').toLowerCase()}))
-      .filter(c => c.tipo!=='hidden' && c.tipo!=='submit' && c.tipo!=='button');
-    return {accion: abs(f.getAttribute('action')||location.href),
-            metodo: (f.getAttribute('method')||'get').toUpperCase(),
-            tiene_password: campos.some(c => c.tipo==='password'),
-            campos: campos.slice(0,10)};
-  });
-  const buscadores = [...document.querySelectorAll('input')].filter(el => {
-    const t=(el.type||'').toLowerCase();
-    const n=((el.name||'')+(el.id||'')+(el.getAttribute('placeholder')||'')).toLowerCase();
-    return t==='search' || /search|buscar|query|\\bq\\b/.test(n);
-  }).length;
-  let enlaces = [...document.querySelectorAll('a[href]')].map(a => a.href);
-  const rls = [...document.querySelectorAll('[routerlink]')]
-    .map(a => abs(a.getAttribute('routerlink')));
-  enlaces = [...new Set(enlaces.concat(rls))].filter(Boolean).slice(0,120);
-  return {forms, buscadores, enlaces};
-}
-"""
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
@@ -81,141 +52,72 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     render_js = conf_crawler.get("render_js", True)
 
     dominio = urlparse(objetivo).netloc
-
     logger.info(f"[crawler] Iniciando rastreo de {objetivo} "
                 f"(max {max_paginas} paginas, profundidad {max_profundidad})")
 
     datos = None
     if render_js:
-        try:
-            datos = _rastrear_con_navegador(objetivo, dominio, max_paginas,
-                                            max_profundidad, logger)
-        except ImportError:
-            logger.warning("[crawler] Playwright no disponible; rastreo HTTP clasico "
-                           "(en SPAs vera poco). Instalar: pip install playwright")
-        except Exception as e:
-            logger.warning(f"[crawler] Fallo el rastreo con navegador ({e}); "
-                           f"se usa el rastreo HTTP clasico.")
+        datos = _rastrear_con_subproceso(objetivo, max_paginas, max_profundidad, logger)
 
     if datos is None:
+        logger.info("[crawler] Usando rastreo HTTP clasico (sin render de JS).")
         datos = _rastrear_con_http(objetivo, dominio, max_paginas,
                                    max_profundidad, config, logger)
 
-    visitadas, rutas, urls_param, formularios, mapa = datos
+    rutas = set(datos.get("rutas", []))
+    urls_param = set(datos.get("urls_param", []))
+    formularios = datos.get("formularios", [])
+    mapa = datos.get("mapa", [])
 
-    logger.info(f"[crawler] Rastreo terminado. {len(visitadas)} pagina(s), "
-                f"{len(formularios)} formulario(s), "
-                f"{len(urls_param)} URL(s) con parametros, "
-                f"{len(mapa)} pagina(s) con superficie de ataque.")
+    logger.info(f"[crawler] Rastreo terminado. {len(rutas)} ruta(s), "
+                f"{len(formularios)} formulario(s), {len(urls_param)} URL(s) con "
+                f"parametros, {len(mapa)} pagina(s) con superficie de ataque.")
 
     _guardar_urls_para_sqlmap(urls_param, config, logger)
-
-    # Dejar el mapa estructurado para el agente de IA (config es compartido).
-    config["_mapa_sitio"] = mapa
+    config["_mapa_sitio"] = mapa   # config es compartido -> lo lee el agente
 
     return _construir_hallazgos(objetivo, rutas, formularios, urls_param, logger)
 
 
 # ---------------------------------------------------------------------------
-# Rastreo con navegador (renderiza JS) — el importante para SPAs
+# Rastreo con navegador, AISLADO en subproceso (evita el choque con Streamlit)
 # ---------------------------------------------------------------------------
-def _rastrear_con_navegador(objetivo, dominio, max_paginas, max_prof, logger):
-    from playwright.sync_api import sync_playwright
-
-    visitadas, rutas, urls_param = set(), set(), set()
-    formularios, firmas, mapa = [], set(), []
-
-    origen = _origen(objetivo)
-    cola = deque([(objetivo, 0)])
-    for rc in RUTAS_COMUNES:                       # sembrar rutas comunes
-        cola.append((urljoin(origen + "/", rc.lstrip("/")) if not rc.startswith("/#")
-                     else origen + rc, 1))
-
-    pw = sync_playwright().start()
-    browser = pw.chromium.launch(headless=True)
-    ctx = browser.new_context(ignore_https_errors=True,
-                              viewport={"width": 1280, "height": 800})
-    page = ctx.new_page()
-    page.set_default_timeout(8000)
+def _rastrear_con_subproceso(objetivo, max_paginas, max_prof, logger):
+    tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+    tmp.close()
+    salida_json = tmp.name
     try:
-        while cola and len(visitadas) < max_paginas:
-            url, prof = cola.popleft()
-            if url in visitadas or prof > max_prof:
-                continue
-            try:
-                try:
-                    resp = page.goto(url, wait_until="networkidle", timeout=12000)
-                except Exception:
-                    resp = page.goto(url, wait_until="domcontentloaded")
-                page.wait_for_timeout(1000)
-                _descartar_overlays(page)
-            except Exception as e:
-                logger.debug(f"[crawler] no se pudo abrir {url}: {e}")
-                continue
+        cmd = [sys.executable, "-m", "modulos.crawler_worker",
+               objetivo, str(max_paginas), str(max_prof), salida_json]
+        logger.info("[crawler] Lanzando rastreo con navegador en subproceso...")
+        proc = subprocess.run(cmd, capture_output=True, text=True,
+                              timeout=TIMEOUT_WORKER_SEG)
+        if proc.returncode != 0:
+            detalle = (proc.stderr or "").strip().splitlines()[-1:] or ["sin detalle"]
+            logger.warning(f"[crawler] El subproceso del navegador fallo: {detalle[0]}")
 
-            visitadas.add(url)
-            # Descartar 404 de rutas comunes que no existen (evita ruido).
-            estado = getattr(resp, "status", 200) if resp else 200
-            if estado >= 400:
-                continue
-
-            url_real = page.url
-            rutas.add(url_real)
-            if urlparse(url_real).query:
-                urls_param.add(url_real)
-
-            try:
-                info = page.evaluate(JS_EXTRAER)
-            except Exception:
-                continue
-
-            hay_login = False
-            for f in info.get("forms", []):
-                if f.get("tiene_password"):
-                    hay_login = True
-                firma = (f.get("accion"), tuple(c["nombre"] for c in f.get("campos", [])))
-                if firma not in firmas:
-                    firmas.add(firma)
-                    formularios.append({
-                        "pagina": url_real, "action": f.get("accion"),
-                        "metodo": f.get("metodo"), "campos": f.get("campos", []),
-                    })
-            hay_busqueda = info.get("buscadores", 0) > 0
-
-            for enlace in info.get("enlaces", []):
-                enlace_limpio = enlace
-                if urlparse(enlace_limpio).netloc != dominio:
-                    continue
-                if _tiene_extension_ignorada(enlace_limpio):
-                    continue
-                if urlparse(enlace_limpio).query:
-                    urls_param.add(enlace_limpio)
-                if enlace_limpio not in visitadas:
-                    cola.append((enlace_limpio, prof + 1))
-
-            # Registrar la pagina en el mapa si tiene superficie de ataque.
-            if hay_login or hay_busqueda or urlparse(url_real).query:
-                mapa.append({
-                    "url": url_real,
-                    "tiene_login": hay_login,
-                    "tiene_busqueda": hay_busqueda,
-                    "tiene_parametros": bool(urlparse(url_real).query),
-                })
-            time.sleep(PAUSA_ENTRE_PETICIONES)
+        with open(salida_json, encoding="utf-8") as f:
+            datos = json.load(f)
+        if "error" in datos:
+            logger.warning(f"[crawler] Worker reporto error: {datos['error']}")
+            return None
+        return datos
+    except subprocess.TimeoutExpired:
+        logger.warning(f"[crawler] El rastreo con navegador supero {TIMEOUT_WORKER_SEG}s. "
+                       f"Se usa el rastreo HTTP.")
+        return None
+    except Exception as e:
+        logger.warning(f"[crawler] No se pudo ejecutar el subproceso del navegador: {e}")
+        return None
     finally:
-        for cerrar in (ctx.close, browser.close, pw.stop):
-            try:
-                cerrar()
-            except Exception:
-                pass
-
-    # Compactar el mapa (el agente digiere mejor algo corto).
-    mapa = _compactar_mapa(mapa)
-    return visitadas, rutas, urls_param, formularios, mapa
+        try:
+            os.unlink(salida_json)
+        except OSError:
+            pass
 
 
 # ---------------------------------------------------------------------------
-# Rastreo HTTP clasico (fallback, para sitios no-SPA o sin Playwright)
+# Rastreo HTTP clasico (fallback)
 # ---------------------------------------------------------------------------
 def _rastrear_con_http(objetivo, dominio, max_paginas, max_prof, config, logger):
     import requests
@@ -278,43 +180,13 @@ def _rastrear_con_http(objetivo, dominio, max_paginas, max_prof, config, logger)
                          "tiene_parametros": bool(urlparse(url).query)})
         time.sleep(PAUSA_ENTRE_PETICIONES)
 
-    return visitadas, rutas, urls_param, formularios, _compactar_mapa(mapa)
+    return {"rutas": sorted(rutas), "urls_param": sorted(urls_param),
+            "formularios": formularios, "mapa": mapa}
 
 
 # ---------------------------------------------------------------------------
 # Auxiliares
 # ---------------------------------------------------------------------------
-def _origen(url):
-    p = urlparse(url)
-    return urlunparse((p.scheme, p.netloc, "", "", "", ""))
-
-
-def _compactar_mapa(mapa, maximo=15):
-    """Deduplica por URL y prioriza login/busqueda; cap para no saturar al 7B."""
-    vistos, salida = set(), []
-    for e in sorted(mapa, key=lambda x: (not x["tiene_login"], not x["tiene_busqueda"])):
-        if e["url"] in vistos:
-            continue
-        vistos.add(e["url"])
-        salida.append(e)
-        if len(salida) >= maximo:
-            break
-    return salida
-
-
-def _descartar_overlays(page):
-    for sel in ["button[aria-label='Close Welcome Banner']",
-                "a[aria-label='dismiss cookie message']",
-                "button:has-text('Dismiss')", "button:has-text('Accept')",
-                "button:has-text('Aceptar')", "button:has-text('OK')"]:
-        try:
-            loc = page.locator(sel).first
-            if loc.count() > 0 and loc.is_visible():
-                loc.click(timeout=1200)
-        except Exception:
-            continue
-
-
 def _extraer_formulario_bs(form, url_pagina):
     action = form.get("action", "")
     metodo = form.get("method", "get").upper()
