@@ -122,8 +122,11 @@ class NavegadorAgente:
         if not self._permitida(url):
             return {"error": "URL fuera del dominio autorizado. Navegacion rechazada."}
         try:
-            self._page.goto(url, wait_until="domcontentloaded")
-            time.sleep(1.2)
+            try:
+                self._page.goto(url, wait_until="networkidle", timeout=12000)
+            except Exception:
+                self._page.goto(url, wait_until="domcontentloaded")
+            self._page.wait_for_timeout(1500)  # deja que la SPA termine de pintar
             self._descartar_overlays()
             self._captura(f"navegar {url}")
             return {"ok": True, "url_actual": self._page.url,
@@ -139,6 +142,7 @@ class NavegadorAgente:
         """
         try:
             self._descartar_overlays()
+            self._page.wait_for_timeout(800)  # asegura DOM pintado en SPAs
             datos = self._page.evaluate(
                 """
                 () => {
@@ -159,7 +163,12 @@ class NavegadorAgente:
                                             tipo:(el.type||'text')}));
                   const enlaces = [...new Set([...document.querySelectorAll('a[href]')]
                     .map(a=>a.href).filter(h => h.includes('?') && h.includes('=')))].slice(0,15);
-                  return {forms, buscadores, enlaces};
+                  // rutas internas descubiertas (incluye rutas hash de SPAs y routerlink Angular)
+                  const rutas = [...new Set([...document.querySelectorAll('a[href],[routerlink]')]
+                    .map(a => a.getAttribute('routerlink') || a.getAttribute('href') || '')
+                    .filter(h => h && (h.startsWith('/') || h.startsWith('#') ||
+                                       h.includes(location.host))))].slice(0,20);
+                  return {forms, buscadores, enlaces, rutas};
                 }
                 """
             )
@@ -167,12 +176,14 @@ class NavegadorAgente:
             forms = datos.get("forms", [])
             buscadores = datos.get("buscadores", [])
             enlaces = datos.get("enlaces", [])
+            rutas = datos.get("rutas", [])
             hay_login = any(f.get("tiene_password") for f in forms)
             resumen = (
                 f"{len(forms)} formulario(s)"
                 + (" (uno con login)" if hay_login else "")
                 + f"; {len(buscadores)} campo(s) de busqueda"
-                + f"; {len(enlaces)} enlace(s) con parametros."
+                + f"; {len(enlaces)} enlace(s) con parametros"
+                + f"; {len(rutas)} ruta(s) internas descubiertas."
             )
             return {
                 "ok": True,
@@ -182,12 +193,14 @@ class NavegadorAgente:
                 "formularios": forms,
                 "buscadores": buscadores,
                 "enlaces_con_parametros": enlaces,
+                "rutas_descubiertas": rutas,
             }
         except Exception as e:
             return {"error": f"No se pudo analizar la pagina: {e}"}
 
     def probar_login(self, usuario, contrasena):
         self._descartar_overlays()
+        url_login = self._page.url   # URL donde se prueba (antes del redirect)
         campo_user = self._encontrar([
             "input[type=email]", "input[name*=email i]", "input[id*=email i]",
             "input[name*=user i]", "input[id*=user i]", "input[type=text]",
@@ -227,7 +240,8 @@ class NavegadorAgente:
             tiene_token = self._page.evaluate(
                 "() => !!(localStorage.getItem('token') || sessionStorage.getItem('token'))")
             exito = ("login" not in url_actual.lower()) or bool(tiene_token)
-            return {"ok": True, "url_actual": url_actual, "posible_exito": exito,
+            return {"ok": True, "url_actual": url_actual, "url_login": url_login,
+                    "posible_exito": exito,
                     "token_presente": bool(tiene_token),
                     "nota": ("Login exitoso: posible bypass de autenticacion por SQLi."
                              if exito else
@@ -279,14 +293,25 @@ class NavegadorAgente:
         """
         if not self._permitida(url):
             return {"error": "URL fuera del dominio autorizado."}
-        m = re.search(r"(\d+)(?!.*\d)", url)  # ultimo numero de la URL
-        if not m:
-            return {"error": "La URL no tiene un id numerico que variar. "
-                             "Da una URL tipo .../item/5 o ...?id=5."}
+        from urllib.parse import urlparse, urlunparse
+        p = urlparse(url)
+        # Buscar el numero SOLO en la ruta o el query, nunca en el host:puerto.
+        if re.search(r"\d", p.query or ""):
+            zona, es_query = p.query, True
+        elif re.search(r"\d", p.path or ""):
+            zona, es_query = p.path, False
+        else:
+            return {"error": "La URL no tiene un id numerico en la ruta o el query "
+                             "que variar. Da una URL tipo .../item/5 o ...?id=5."}
+        m = re.search(r"(\d+)(?!.*\d)", zona)  # ultimo numero de esa zona
         try:
             id_orig = int(m.group(1))
             id_var = id_orig + 1
-            url_var = url[:m.start()] + str(id_var) + url[m.end():]
+            nueva = zona[:m.start()] + str(id_var) + zona[m.end():]
+            if es_query:
+                url_var = urlunparse((p.scheme, p.netloc, p.path, p.params, nueva, p.fragment))
+            else:
+                url_var = urlunparse((p.scheme, p.netloc, nueva, p.params, p.query, p.fragment))
 
             self._page.goto(url, wait_until="domcontentloaded"); time.sleep(1.0)
             self._captura(f"idor: original id={id_orig}")
@@ -298,7 +323,7 @@ class NavegadorAgente:
             self._captura(f"idor: variacion id={id_var}")
             len_var = len(self._page.content() or "")
 
-            accesible = len_var > 200  # heuristica: devolvio contenido real
+            accesible = len_var > 200
             return {"ok": True, "id_original": id_orig, "id_variado": id_var,
                     "url_variada": url_var, "tam_original": len_orig,
                     "tam_variado": len_var, "variacion_accesible": accesible,

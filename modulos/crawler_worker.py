@@ -79,12 +79,21 @@ def _descartar_overlays(page):
             continue
 
 
+def _ruta_spa(url):
+    """Identidad de una vista: en SPAs es el fragmento (#/login); si no, el path."""
+    p = urlparse(url)
+    return p.fragment or p.path or "/"
+
+
 def _compactar_mapa(mapa, maximo=15):
+    """Deduplica por RUTA de SPA (no por URL completa) y prioriza login/busqueda.
+    Asi /login, /admin#/login y /administrator#/login (misma vista) cuentan una vez."""
     vistos, salida = set(), []
     for e in sorted(mapa, key=lambda x: (not x["tiene_login"], not x["tiene_busqueda"])):
-        if e["url"] in vistos:
+        clave = _ruta_spa(e["url"])
+        if clave in vistos:
             continue
-        vistos.add(e["url"])
+        vistos.add(clave)
         salida.append(e)
         if len(salida) >= maximo:
             break
@@ -144,7 +153,8 @@ def rastrear(objetivo, max_paginas, max_prof):
             for f in info.get("forms", []):
                 if f.get("tiene_password"):
                     hay_login = True
-                firma = (f.get("accion"), tuple(c["nombre"] for c in f.get("campos", [])))
+                firma = (_ruta_spa(url_real),
+                         tuple(c["nombre"] for c in f.get("campos", [])))
                 if firma not in firmas:
                     firmas.add(firma)
                     formularios.append({
