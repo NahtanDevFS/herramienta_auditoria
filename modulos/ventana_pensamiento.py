@@ -1,0 +1,137 @@
+"""
+ventana_pensamiento.py  —  Ventana emergente con el "hilo de pensamiento" del agente
+
+Muestra en una ventana FLOTANTE aparte (Tkinter) lo que el agente va pensando y
+haciendo en tiempo real: razonamiento, decisiones, resultados y hallazgos. Ideal
+para una demo presencial: flota junto a la ventana del navegador y se llena sola.
+
+Arquitectura: corre en un SUBPROCESO (Tkinter necesita su propio bucle y no puede
+convivir con el de Streamlit). El agente escribe eventos (una linea JSON por
+evento) en un archivo, y esta ventana lo va leyendo y mostrando.
+
+Uso (lo lanza el agente, no se corre a mano):
+    python -m modulos.ventana_pensamiento <archivo_eventos>
+
+La clase EmisorPensamiento (abajo) es la que usa el agente para lanzar la ventana
+y enviarle eventos.
+"""
+
+import json
+import os
+import sys
+
+ICONOS = {"pensando": "\U0001F914", "accion": "\u27A1\uFE0F", "resultado": "   \u2714",
+          "hallazgo": "\U0001F6A8", "info": "\u2139\uFE0F"}
+
+
+def _main_ventana(archivo):
+    import tkinter as tk
+    from tkinter import scrolledtext
+
+    root = tk.Tk()
+    root.title("Razonamiento del agente")
+    root.geometry("660x780")
+    root.configure(bg="#0d1117")
+
+    tk.Label(root, text="Razonamiento del agente en vivo", bg="#0d1117",
+             fg="#58a6ff", font=("Segoe UI", 15, "bold")).pack(pady=10)
+
+    txt = scrolledtext.ScrolledText(root, bg="#0d1117", fg="#c9d1d9",
+                                    font=("Consolas", 12), wrap=tk.WORD,
+                                    borderwidth=0, padx=10, pady=10)
+    txt.pack(expand=True, fill="both", padx=12, pady=(0, 12))
+    txt.tag_config("pensando", foreground="#d29922")
+    txt.tag_config("accion", foreground="#58a6ff")
+    txt.tag_config("resultado", foreground="#3fb950")
+    txt.tag_config("hallazgo", foreground="#f85149", font=("Consolas", 12, "bold"))
+    txt.tag_config("info", foreground="#8b949e")
+
+    estado = {"pos": 0}
+
+    def poll():
+        try:
+            if os.path.exists(archivo):
+                with open(archivo, encoding="utf-8") as f:
+                    f.seek(estado["pos"])
+                    for linea in f:
+                        linea = linea.strip()
+                        if not linea:
+                            continue
+                        try:
+                            ev = json.loads(linea)
+                        except Exception:
+                            continue
+                        tipo = ev.get("tipo", "info")
+                        texto = ev.get("texto", "")
+                        if tipo == "fin":
+                            root.title("Razonamiento del agente (finalizado)")
+                            continue
+                        icono = ICONOS.get(tipo, "")
+                        txt.insert("end", f"{icono} {texto}\n\n", tipo)
+                        txt.see("end")
+                    estado["pos"] = f.tell()
+        except Exception:
+            pass
+        root.after(250, poll)
+
+    poll()
+    root.mainloop()
+
+
+class EmisorPensamiento:
+    """Lanza la ventana en un subproceso y le envia eventos escribiendo en un archivo."""
+
+    def __init__(self, activo=True, logger=None):
+        self.activo = bool(activo)
+        self.logger = logger
+        self._f = None
+        self._proc = None
+        if not self.activo:
+            return
+        import subprocess
+        import tempfile
+        try:
+            tmp = tempfile.NamedTemporaryFile(prefix="pensamiento_", suffix=".jsonl",
+                                              delete=False)
+            self._ruta = tmp.name
+            tmp.close()
+            self._f = open(self._ruta, "a", encoding="utf-8")
+            self._proc = subprocess.Popen(
+                [sys.executable, "-m", "modulos.ventana_pensamiento", self._ruta],
+                cwd=os.getcwd(),
+            )
+            if logger:
+                logger.info("[pensamiento] Ventana de razonamiento abierta.")
+        except Exception as e:
+            if logger:
+                logger.warning(f"[pensamiento] No se pudo abrir la ventana: {e}")
+            self.activo = False
+
+    def emitir(self, tipo, texto):
+        if not self.activo or not self._f:
+            return
+        try:
+            self._f.write(json.dumps({"tipo": tipo, "texto": texto},
+                                     ensure_ascii=False) + "\n")
+            self._f.flush()
+        except Exception:
+            pass
+
+    def cerrar(self):
+        # Se deja la ventana ABIERTA para que el publico siga leyendo; solo
+        # marcamos el fin. El usuario la cierra a mano cuando termina la demo.
+        self.emitir("fin", "")
+        try:
+            if self._f:
+                self._f.close()
+        except Exception:
+            pass
+
+
+if __name__ == "__main__":
+    if len(sys.argv) >= 2:
+        _main_ventana(sys.argv[1])
+    else:
+        print("uso: python -m modulos.ventana_pensamiento <archivo_eventos>",
+              file=sys.stderr)
+        sys.exit(2)

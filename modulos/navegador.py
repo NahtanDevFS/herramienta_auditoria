@@ -52,7 +52,20 @@ class NavegadorAgente:
         self.carpeta_capturas = carpeta_capturas
 
         self._pw = sync_playwright().start()
-        self._browser = self._pw.chromium.launch(headless=headless)
+        try:
+            self._browser = self._pw.chromium.launch(headless=headless)
+        except Exception as e:
+            # headless=False falla si no hay pantalla (sin WSLg / sin DISPLAY).
+            # En vez de romper, caemos a modo oculto y seguimos (las capturas y
+            # el panel en vivo siguen funcionando igual).
+            if not headless:
+                if logger:
+                    logger.warning(f"[navegador] No se pudo abrir ventana visible "
+                                   f"({e}); usando modo oculto. Para ver la ventana en "
+                                   f"WSL necesitas WSLg (Windows 11) y $DISPLAY.")
+                self._browser = self._pw.chromium.launch(headless=True)
+            else:
+                raise
         self._context = self._browser.new_context(
             record_video_dir=carpeta_video,
             viewport={"width": 1280, "height": 800},

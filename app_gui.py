@@ -95,6 +95,8 @@ with st.sidebar:
     modelo_ollama = "jonathanFS/pentest-owasp"
     host_ollama = "http://localhost:11434"
     usar_navegador = True
+    abrir_ventana = False
+    ventana_pensamiento = False
     limite_acciones_agente = 20
     timeout_agente = 600
     if modulos_activos.get("agente_ia"):
@@ -106,6 +108,17 @@ with st.sidebar:
         usar_navegador = st.checkbox(
             "Modo navegador (ver acciones en vivo)", value=True,
             help="Usa Playwright para interactuar con el sitio y mostrar capturas en vivo.",
+        )
+        if usar_navegador:
+            abrir_ventana = st.checkbox(
+                "Abrir ventana del navegador (verlo en vivo)", value=False,
+                help="Abre una ventana de Chrome visible mientras el agente actua. "
+                     "En WSL requiere WSLg (Windows 11). Si no hay pantalla, cae a modo oculto.",
+            )
+        ventana_pensamiento = st.checkbox(
+            "Ventana de pensamiento del agente", value=False,
+            help="Abre una ventana flotante que muestra en vivo el razonamiento del "
+                 "agente (que piensa, que decide, que confirma). En WSL requiere WSLg.",
         )
         limite_acciones_agente = st.number_input("Limite de acciones por sesion",
                                                  min_value=1, max_value=50, value=20)
@@ -154,6 +167,8 @@ if lanzar:
             "modelo": modelo_ollama,
             "host": host_ollama,
             "navegador": usar_navegador,
+            "headless": not abrir_ventana,
+            "ventana_pensamiento": ventana_pensamiento,
             "limite_acciones": limite_acciones_agente,
             "timeout_sesion_seg": timeout_agente,
         },
