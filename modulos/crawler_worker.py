@@ -187,6 +187,21 @@ def rastrear(objetivo, max_paginas, max_prof):
                     })
             hay_busqueda = info.get("buscadores", 0) > 0
 
+            # Si hay un buscador, hacemos una busqueda de prueba para DISPARAR la
+            # llamada a la API de busqueda (asi el listener la captura). Es donde
+            # suelen vivir inyecciones, y no se captura si nadie busca.
+            if hay_busqueda:
+                try:
+                    campo = page.locator(
+                        "input[type=search], input[name*=search i], "
+                        "input[id*=search i], input[name=q]").first
+                    if campo.count() > 0 and campo.is_visible():
+                        campo.fill("test")
+                        campo.press("Enter")
+                        page.wait_for_timeout(1200)  # deja que la API responda
+                except Exception:
+                    pass
+
             for enlace in info.get("enlaces", []):
                 if urlparse(enlace).netloc != dominio:
                     continue
