@@ -68,6 +68,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     urls_param = set(datos.get("urls_param", []))
     formularios = datos.get("formularios", [])
     mapa = datos.get("mapa", [])
+    endpoints_api = datos.get("endpoints_api", [])
 
     logger.info(f"[crawler] Rastreo terminado. {len(rutas)} ruta(s), "
                 f"{len(formularios)} formulario(s), {len(urls_param)} URL(s) con "
@@ -75,6 +76,10 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
     _guardar_urls_para_sqlmap(urls_param, config, logger)
     config["_mapa_sitio"] = mapa   # config es compartido -> lo lee el agente
+    config["_rutas_descubiertas"] = sorted(rutas)  # para sembrar objetivos estables
+    config["_endpoints_api"] = endpoints_api       # endpoints REST para el agente
+    if endpoints_api:
+        logger.info(f"[crawler] {len(endpoints_api)} endpoint(s) de API detectado(s).")
 
     return _construir_hallazgos(objetivo, rutas, formularios, urls_param, logger)
 

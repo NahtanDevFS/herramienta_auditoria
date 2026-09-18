@@ -89,7 +89,8 @@ def _compactar_mapa(mapa, maximo=15):
     """Deduplica por RUTA de SPA (no por URL completa) y prioriza login/busqueda.
     Asi /login, /admin#/login y /administrator#/login (misma vista) cuentan una vez."""
     vistos, salida = set(), []
-    for e in sorted(mapa, key=lambda x: (not x["tiene_login"], not x["tiene_busqueda"])):
+    for e in sorted(mapa, key=lambda x: (not x["tiene_login"], not x["tiene_busqueda"],
+                                         not x.get("tiene_formulario", False))):
         clave = _ruta_spa(e["url"])
         if clave in vistos:
             continue
@@ -106,6 +107,7 @@ def rastrear(objetivo, max_paginas, max_prof):
     dominio = urlparse(objetivo).netloc
     visitadas, rutas, urls_param = set(), set(), set()
     formularios, firmas, mapa = [], set(), []
+    endpoints_api = set()   # endpoints REST detectados escuchando la red
 
     origen = _origen(objetivo)
     cola = deque([(objetivo, 0)])
@@ -119,6 +121,23 @@ def rastrear(objetivo, max_paginas, max_prof):
                               viewport={"width": 1280, "height": 800})
     page = ctx.new_page()
     page.set_default_timeout(8000)
+
+    # Escuchar el trafico: la SPA llama a su API por detras (fetch/XHR). Capturamos
+    # esas URLs, que no aparecen como enlaces normales. Es la forma fiable de
+    # descubrir la superficie de API sin adivinar rutas.
+    def _capturar_peticion(req):
+        try:
+            u = req.url
+            if urlparse(u).netloc != dominio:
+                return
+            ruta = urlparse(u).path.lower()
+            if "/api/" in ruta or "/rest/" in ruta or ruta.endswith("/api") \
+               or ruta.endswith("/rest") or "/graphql" in ruta:
+                endpoints_api.add(u.split("#")[0])
+        except Exception:
+            pass
+
+    page.on("request", _capturar_peticion)
     try:
         while cola and len(visitadas) < max_paginas:
             url, prof = cola.popleft()
@@ -150,9 +169,14 @@ def rastrear(objetivo, max_paginas, max_prof):
                 continue
 
             hay_login = False
+            hay_formulario = False
+            TEXTO = {"text", "email", "textarea", "tel", "search", "number", "url", ""}
             for f in info.get("forms", []):
                 if f.get("tiene_password"):
                     hay_login = True
+                elif any(c.get("tipo") in TEXTO for c in f.get("campos", [])):
+                    # Formulario de datos sin password: contacto, feedback, perfil...
+                    hay_formulario = True
                 firma = (_ruta_spa(url_real),
                          tuple(c["nombre"] for c in f.get("campos", [])))
                 if firma not in firmas:
@@ -173,9 +197,10 @@ def rastrear(objetivo, max_paginas, max_prof):
                 if enlace not in visitadas:
                     cola.append((enlace, prof + 1))
 
-            if hay_login or hay_busqueda or urlparse(url_real).query:
+            if hay_login or hay_busqueda or hay_formulario or urlparse(url_real).query:
                 mapa.append({"url": url_real, "tiene_login": hay_login,
                              "tiene_busqueda": hay_busqueda,
+                             "tiene_formulario": hay_formulario,
                              "tiene_parametros": bool(urlparse(url_real).query)})
             time.sleep(0.2)
     finally:
@@ -190,6 +215,7 @@ def rastrear(objetivo, max_paginas, max_prof):
         "urls_param": sorted(urls_param),
         "formularios": formularios,
         "mapa": _compactar_mapa(mapa),
+        "endpoints_api": sorted(endpoints_api)[:30],
     }
 
 

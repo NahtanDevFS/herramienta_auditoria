@@ -347,6 +347,58 @@ class NavegadorAgente:
             self._captura("idor: error")
             return {"error": f"Error durante la prueba IDOR: {e}"}
 
+    def probar_formulario(self, payload):
+        """
+        Prueba inyeccion en un formulario GENERICO (contacto, feedback, perfil):
+        rellena el primer campo de texto/area no-password con el payload, lo envia,
+        y detecta reflejo (XSS) o errores SQL. Distinto de probar_busqueda (que
+        busca inputs de busqueda): esto ataca formularios de datos.
+        """
+        self._descartar_overlays()
+        campo = self._encontrar([
+            "form textarea", "form input[type=text]", "form input[type=email]",
+            "form input[type=search]", "form input:not([type])",
+            "textarea", "input[type=text]", "input[type=email]",
+        ])
+        if not campo:
+            self._captura("formulario: sin campo de texto")
+            return {"error": "No se encontro un campo de texto en un formulario. "
+                             "Usa analizar_pagina para ver los formularios disponibles."}
+        try:
+            campo.fill(payload)
+            self._captura(f"formulario: payload ingresado ({payload!r})")
+            boton = self._encontrar([
+                "form button[type=submit]", "form input[type=submit]",
+                "button[type=submit]", "button:has-text('Submit')",
+                "button:has-text('Enviar')", "button:has-text('Send')",
+            ])
+            if boton:
+                try:
+                    boton.click()
+                except Exception:
+                    self._descartar_overlays()
+                    try:
+                        boton.click(force=True)
+                    except Exception:
+                        campo.press("Enter")
+            else:
+                campo.press("Enter")
+            time.sleep(1.5)
+            self._captura("formulario: resultado")
+            contenido = (self._page.content() or "").lower()
+            posible_reflejo = payload.lower() in contenido
+            error_sql = next((e for e in ERRORES_SQL if e in contenido), None)
+            return {"ok": True, "url_actual": self._page.url,
+                    "posible_reflejo_xss": posible_reflejo,
+                    "posible_error_sql": bool(error_sql),
+                    "detalle_sql": error_sql or "",
+                    "nota": ("El payload se refleja: posible XSS." if posible_reflejo
+                             else ("Error SQL detectado: posible inyeccion." if error_sql
+                                   else "Sin senales claras con este payload."))}
+        except Exception as e:
+            self._captura("formulario: error")
+            return {"error": f"Error al probar el formulario: {e}"}
+
     def tomar_captura(self, nota=""):
         ruta = self._captura(nota or "captura manual")
         return {"ok": True, "captura": ruta}
@@ -417,6 +469,15 @@ def declarar_tools_navegador():
             "parameters": {"type": "object",
                            "properties": {"url": {"type": "string"}},
                            "required": ["url"]}}},
+        {"type": "function", "function": {
+            "name": "probar_formulario",
+            "description": "Inyecta un payload en un formulario de datos (contacto, "
+                           "feedback, perfil) de la pagina actual y detecta reflejo "
+                           "(XSS) o errores SQL. Prueba payloads como "
+                           "\"<script>alert(1)</script>\" o \"' OR 1=1--\".",
+            "parameters": {"type": "object",
+                           "properties": {"payload": {"type": "string"}},
+                           "required": ["payload"]}}},
         {"type": "function", "function": {
             "name": "tomar_captura",
             "description": "Toma una captura del estado actual de la pagina.",
