@@ -131,6 +131,52 @@ class NavegadorAgente:
 
     # ----- herramientas de alto nivel (las llama el agente) -------------------
 
+    def login_real(self, url_login, usuario, contrasena):
+        """
+        Inicia sesion con credenciales REALES (no payloads). Se usa como paso
+        previo para auditar la zona autenticada. Devuelve si logro entrar.
+        NOTA: las credenciales no se registran en logs ni en capturas de texto.
+        """
+        try:
+            self.navegar(url_login)
+        except Exception:
+            pass
+        self._descartar_overlays()
+        campo_user = self._encontrar([
+            "input[type=email]", "input[name*=email i]", "input[id*=email i]",
+            "input[name*=user i]", "input[id*=user i]", "input[type=text]",
+        ])
+        campo_pass = self._encontrar([
+            "input[type=password]", "input[name*=pass i]", "input[id*=pass i]",
+        ])
+        if not campo_user or not campo_pass:
+            return {"ok": False, "error": "No se encontro el formulario de login."}
+        try:
+            campo_user.fill(usuario)
+            campo_pass.fill(contrasena)
+            self._captura("login real: credenciales ingresadas")
+            boton = self._encontrar([
+                "button[type=submit]", "#loginButton", "input[type=submit]",
+                "button:has-text('Log in')", "button:has-text('Login')",
+                "button:has-text('Iniciar')", "button:has-text('Entrar')",
+            ])
+            if boton:
+                try:
+                    boton.click()
+                except Exception:
+                    boton.click(force=True)
+            else:
+                campo_pass.press("Enter")
+            time.sleep(1.8)
+            self._captura("login real: resultado")
+            tiene_token = self._page.evaluate(
+                "() => !!(localStorage.getItem('token') || sessionStorage.getItem('token'))")
+            autenticado = bool(tiene_token) or ("login" not in self._page.url.lower())
+            return {"ok": autenticado, "url_actual": self._page.url,
+                    "token_presente": bool(tiene_token)}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
     def navegar(self, url):
         if not self._permitida(url):
             return {"error": "URL fuera del dominio autorizado. Navegacion rechazada."}
@@ -210,6 +256,50 @@ class NavegadorAgente:
             }
         except Exception as e:
             return {"error": f"No se pudo analizar la pagina: {e}"}
+
+    def iniciar_sesion(self, url_login, usuario, contrasena):
+        """
+        Inicia sesion REAL con credenciales validas (no payloads). Se usa como paso
+        previo para auditar la zona autenticada. Devuelve si el login tuvo exito.
+        """
+        try:
+            self.navegar(url_login)
+        except Exception:
+            pass
+        self._descartar_overlays()
+        campo_user = self._encontrar([
+            "input[type=email]", "input[name*=email i]", "input[id*=email i]",
+            "input[name*=user i]", "input[id*=user i]", "input[type=text]",
+        ])
+        campo_pass = self._encontrar([
+            "input[type=password]", "input[name*=pass i]", "input[id*=pass i]",
+        ])
+        if not campo_user or not campo_pass:
+            return {"ok": False, "error": "No se encontro el formulario de login."}
+        try:
+            campo_user.fill(usuario)
+            campo_pass.fill(contrasena)
+            self._captura("login real: credenciales ingresadas")
+            boton = self._encontrar([
+                "button[type=submit]", "#loginButton", "input[type=submit]",
+                "button:has-text('Log in')", "button:has-text('Login')",
+                "button:has-text('Iniciar')", "button:has-text('Entrar')",
+            ])
+            if boton:
+                try:
+                    boton.click()
+                except Exception:
+                    campo_pass.press("Enter")
+            else:
+                campo_pass.press("Enter")
+            time.sleep(1.8)
+            self._captura("login real: resultado")
+            tiene_token = self._page.evaluate(
+                "() => !!(localStorage.getItem('token') || sessionStorage.getItem('token'))")
+            return {"ok": bool(tiene_token), "autenticado": bool(tiene_token),
+                    "url_actual": self._page.url}
+        except Exception as e:
+            return {"ok": False, "error": f"Error en el login: {e}"}
 
     def probar_login(self, usuario, contrasena):
         self._descartar_overlays()

@@ -97,6 +97,8 @@ with st.sidebar:
     usar_navegador = True
     abrir_ventana = False
     ventana_pensamiento = False
+    cred_usuario = ""
+    cred_contrasena = ""
     limite_acciones_agente = 20
     timeout_agente = 600
     if modulos_activos.get("agente_ia"):
@@ -120,6 +122,11 @@ with st.sidebar:
             help="Abre una ventana flotante que muestra en vivo el razonamiento del "
                  "agente (que piensa, que decide, que confirma). En WSL requiere WSLg.",
         )
+        st.markdown("**Credenciales (opcional)** — para auditar la zona autenticada")
+        cred_usuario = st.text_input("Usuario / email", value="",
+                                     help="Solo para auditar TU propia web. Si lo dejas "
+                                          "vacio, la auditoria corre sin iniciar sesion.")
+        cred_contrasena = st.text_input("Contraseña", value="", type="password")
         limite_acciones_agente = st.number_input("Limite de acciones por sesion",
                                                  min_value=1, max_value=50, value=20)
         timeout_agente = st.number_input("Timeout de sesion (segundos)",
@@ -169,6 +176,8 @@ if lanzar:
             "navegador": usar_navegador,
             "headless": not abrir_ventana,
             "ventana_pensamiento": ventana_pensamiento,
+            "usuario": cred_usuario.strip(),
+            "contrasena": cred_contrasena,
             "limite_acciones": limite_acciones_agente,
             "timeout_sesion_seg": timeout_agente,
         },
