@@ -69,10 +69,10 @@ with st.sidebar:
     st.subheader("Modulos a ejecutar")
 
     col_a, col_b = st.columns(2)
-    if col_a.button("Marcar todos", use_container_width=True):
+    if col_a.button("Marcar todos", width='stretch'):
         for clave in MODULOS_INFO:
             st.session_state[f"mod_{clave}"] = True
-    if col_b.button("Desmarcar todos", use_container_width=True):
+    if col_b.button("Desmarcar todos", width='stretch'):
         for clave in MODULOS_INFO:
             st.session_state[f"mod_{clave}"] = False
 
@@ -141,7 +141,7 @@ with st.sidebar:
         "Confirmo que tengo AUTORIZACION para auditar este objetivo", value=False)
 
     lanzar = st.button("Iniciar auditoria", type="primary",
-                       use_container_width=True, disabled=not autorizado)
+                       width='stretch', disabled=not autorizado)
 
 
 # --- Zona principal ---
@@ -210,7 +210,7 @@ if lanzar:
         lineas = "\n\n".join(f"**{i+1}.** {p}" for i, p in enumerate(pasos))
         log_ph.markdown(lineas)
         try:
-            img_ph.image(ruta_png, use_container_width=True)
+            img_ph.image(ruta_png, width='stretch')
         except Exception:
             pass
 

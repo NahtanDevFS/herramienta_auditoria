@@ -357,6 +357,8 @@ class NavegadorAgente:
         """
         Inyecta un payload en un campo de busqueda/texto y detecta si se refleja
         (posible XSS) o si aparecen errores SQL (posible inyeccion SQL).
+        Si el payload contiene un script con alert(), escucha el evento 'dialog'
+        para confirmar ejecucion real (no solo reflejo textual).
         """
         self._descartar_overlays()
         campo = self._encontrar([
@@ -369,6 +371,16 @@ class NavegadorAgente:
             return {"error": "No se encontro un campo de busqueda/texto. "
                              "Usa analizar_pagina para ver que inputs hay."}
         try:
+            # Escuchar dialogs (alert/confirm/prompt) para confirmar XSS real.
+            dialog_disparado = [False]
+            def _on_dialog(dialog):
+                dialog_disparado[0] = True
+                try:
+                    dialog.dismiss()
+                except Exception:
+                    pass
+            self._page.on("dialog", _on_dialog)
+
             campo.fill(payload)
             self._captura(f"busqueda: payload ingresado ({payload!r})")
             campo.press("Enter")
@@ -376,15 +388,27 @@ class NavegadorAgente:
             self._captura("busqueda: resultado")
             contenido = (self._page.content() or "").lower()
             posible_reflejo = payload.lower() in contenido
+            xss_confirmado = dialog_disparado[0]
             error_sql = next((e for e in ERRORES_SQL if e in contenido), None)
+
+            # Quitar listener para no acumular.
+            try:
+                self._page.remove_listener("dialog", _on_dialog)
+            except Exception:
+                pass
+
             return {"ok": True, "url_actual": self._page.url,
                     "posible_reflejo_xss": posible_reflejo,
+                    "xss_confirmado": xss_confirmado,
                     "posible_error_sql": bool(error_sql),
                     "detalle_sql": error_sql or "",
-                    "nota": ("El payload se refleja en la respuesta: posible XSS."
-                             if posible_reflejo else
-                             ("Se detecto un error SQL: posible inyeccion." if error_sql
-                              else "Sin senales claras con este payload."))}
+                    "nota": ("XSS CONFIRMADO: el script se ejecuto (dialog detectado)."
+                             if xss_confirmado else
+                             ("El payload se refleja en la respuesta: posible XSS "
+                              "(no se confirmo ejecucion)."
+                              if posible_reflejo else
+                              ("Se detecto un error SQL: posible inyeccion." if error_sql
+                               else "Sin senales claras con este payload.")))}
         except Exception as e:
             self._captura("busqueda: error")
             return {"error": f"Error durante la busqueda: {e}"}
@@ -443,6 +467,8 @@ class NavegadorAgente:
         rellena el primer campo de texto/area no-password con el payload, lo envia,
         y detecta reflejo (XSS) o errores SQL. Distinto de probar_busqueda (que
         busca inputs de busqueda): esto ataca formularios de datos.
+        Si el payload contiene un script con alert(), escucha el evento 'dialog'
+        para confirmar ejecucion real.
         """
         self._descartar_overlays()
         campo = self._encontrar([
@@ -455,6 +481,16 @@ class NavegadorAgente:
             return {"error": "No se encontro un campo de texto en un formulario. "
                              "Usa analizar_pagina para ver los formularios disponibles."}
         try:
+            # Escuchar dialogs para confirmar XSS real.
+            dialog_disparado = [False]
+            def _on_dialog(dialog):
+                dialog_disparado[0] = True
+                try:
+                    dialog.dismiss()
+                except Exception:
+                    pass
+            self._page.on("dialog", _on_dialog)
+
             campo.fill(payload)
             self._captura(f"formulario: payload ingresado ({payload!r})")
             boton = self._encontrar([
@@ -477,14 +513,26 @@ class NavegadorAgente:
             self._captura("formulario: resultado")
             contenido = (self._page.content() or "").lower()
             posible_reflejo = payload.lower() in contenido
+            xss_confirmado = dialog_disparado[0]
             error_sql = next((e for e in ERRORES_SQL if e in contenido), None)
+
+            # Quitar listener.
+            try:
+                self._page.remove_listener("dialog", _on_dialog)
+            except Exception:
+                pass
+
             return {"ok": True, "url_actual": self._page.url,
                     "posible_reflejo_xss": posible_reflejo,
+                    "xss_confirmado": xss_confirmado,
                     "posible_error_sql": bool(error_sql),
                     "detalle_sql": error_sql or "",
-                    "nota": ("El payload se refleja: posible XSS." if posible_reflejo
-                             else ("Error SQL detectado: posible inyeccion." if error_sql
-                                   else "Sin senales claras con este payload."))}
+                    "nota": ("XSS CONFIRMADO: el script se ejecuto (dialog detectado)."
+                             if xss_confirmado else
+                             ("El payload se refleja: posible XSS (no se confirmo "
+                              "ejecucion)." if posible_reflejo
+                              else ("Error SQL detectado: posible inyeccion." if error_sql
+                                    else "Sin senales claras con este payload.")))}
         except Exception as e:
             self._captura("formulario: error")
             return {"error": f"Error al probar el formulario: {e}"}
