@@ -1,21 +1,6 @@
-"""
-cookies.py  (modulo de deteccion - A04: Cryptographic Failures)
-Revisa las cookies que envia la web y comprueba que tengan los flags de
-seguridad recomendados. Por cada cookie con un flag ausente o mal puesto,
-genera un Hallazgo.
-
-Flags que revisamos y por que importan:
-  - Secure   : la cookie solo se envia por HTTPS. Sin el, puede viajar en
-               claro por HTTP y ser interceptada.
-  - HttpOnly : el JavaScript de la pagina no puede leer la cookie. Sin el,
-               un XSS podria robar la cookie de sesion.
-  - SameSite : controla si la cookie se envia en peticiones de otros sitios.
-               Sin un valor adecuado (Lax o Strict), facilita ataques CSRF.
-
-Sigue el mismo patron que cabeceras_http:
-    def ejecutar(config, logger) -> list[Hallazgo]
-El modulo solo detecta y devuelve; el orquestador (main.py) recoge la lista.
-"""
+# cookies.py - Modulo de deteccion (A04: Cryptographic Failures)
+# Revisa las cookies que envia la web y comprueba los flags de seguridad.
+# Genera un Hallazgo por cada cookie con un flag ausente o mal puesto (Secure, HttpOnly, SameSite).
 
 import logging
 
@@ -28,18 +13,12 @@ ORIGEN = "modulo_cookies"
 
 
 def _analizar_cookie(cookie, objetivo: str) -> list[Hallazgo]:
-    """
-    Analiza UNA cookie y devuelve los hallazgos de los flags que le falten.
-
-    'cookie' es un objeto del cookiejar de requests, del que podemos leer:
-      - cookie.secure        -> True/False (flag Secure)
-      - cookie.has_nonstandard_attr('HttpOnly') -> flag HttpOnly
-      - cookie._rest          -> dict con atributos extra como SameSite
-    """
+    # Analiza UNA cookie y devuelve los hallazgos de los flags que le falten.
+    # 'cookie' es un objeto del cookiejar de requests.
     hallazgos: list[Hallazgo] = []
     nombre = cookie.name
 
-    #Flag Secure
+    # Flag Secure
     if not cookie.secure:
         hallazgos.append(Hallazgo(
             titulo=f"Cookie sin flag Secure: {nombre}",
@@ -60,9 +39,7 @@ def _analizar_cookie(cookie, objetivo: str) -> list[Hallazgo]:
             url_afectada=objetivo,
         ))
 
-    #Flag HttpOnly
-    # requests guarda los atributos no estandar en cookie._rest (claves
-    # insensibles a mayusculas). HttpOnly aparece ahi si esta presente.
+    # Flag HttpOnly (buscamos en atributos no estandar)
     tiene_httponly = cookie.has_nonstandard_attr("HttpOnly") or \
         cookie.has_nonstandard_attr("httponly")
     if not tiene_httponly:
@@ -85,9 +62,7 @@ def _analizar_cookie(cookie, objetivo: str) -> list[Hallazgo]:
             url_afectada=objetivo,
         ))
 
-    # Atributo SameSite
-    # SameSite se guarda en cookie._rest. Buscamos su valor sin importar
-    # mayusculas.
+    # Atributo SameSite (buscamos en atributos no estandar)
     samesite = None
     for clave, valor in cookie._rest.items():
         if clave.lower() == "samesite":
@@ -114,8 +89,7 @@ def _analizar_cookie(cookie, objetivo: str) -> list[Hallazgo]:
             url_afectada=objetivo,
         ))
     elif samesite.lower() == "none":
-        # SameSite=None es valido pero debe ir siempre con Secure y es la
-        # opcion mas permisiva: la señalamos como informativa.
+        # SameSite=None es valido pero debe ir siempre con Secure. Informativo.
         hallazgos.append(Hallazgo(
             titulo=f"Cookie con SameSite=None: {nombre}",
             categoria="A04",
@@ -140,15 +114,8 @@ def _analizar_cookie(cookie, objetivo: str) -> list[Hallazgo]:
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    """
-    Punto de entrada del modulo (lo llama main.py).
-
-    Hace una peticion GET a la URL objetivo, recorre las cookies que el
-    servidor haya establecido (Set-Cookie) y revisa sus flags de seguridad.
-
-    Devuelve lista vacia si no hay cookies, si todas estan bien configuradas
-    o si no se pudo conectar.
-    """
+    # Punto de entrada del modulo (lo llama main.py).
+    # Hace peticion GET y revisa los flags de las cookies establecidas.
     objetivo = config["objetivo"]["url"].strip()
     opciones = config.get("opciones", {})
     timeout = opciones.get("timeout", 10)

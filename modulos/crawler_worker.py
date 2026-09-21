@@ -1,15 +1,6 @@
-"""
-crawler_worker.py  —  Worker de rastreo con navegador (se ejecuta en SUBPROCESO)
-
-Playwright (API sincrona) NO puede correr dentro del bucle de asyncio de
-Streamlit. Para evitar ese conflicto, todo el rastreo con navegador se ejecuta
-aqui, en un proceso APARTE y limpio, lanzado por crawler.py.
-
-Uso (lo invoca crawler.py, no se corre a mano normalmente):
-    python -m modulos.crawler_worker <url_objetivo> <max_paginas> <max_prof> <salida_json>
-
-Escribe en <salida_json> un objeto con: rutas, urls_param, formularios, mapa.
-"""
+# crawler_worker.py - Worker de rastreo con navegador (Subproceso aislado)
+# Playwright NO puede correr dentro del bucle de asyncio de Streamlit.
+# Todo el rastreo visual se ejecuta aqui de forma aislada, lanzado por crawler.py.
 
 import json
 import sys
@@ -80,14 +71,14 @@ def _descartar_overlays(page):
 
 
 def _ruta_spa(url):
-    """Identidad de una vista: en SPAs es el fragmento (#/login); si no, el path."""
+    # Identidad de una vista: en SPAs es el fragmento (#/login); si no, el path.
     p = urlparse(url)
     return p.fragment or p.path or "/"
 
 
 def _compactar_mapa(mapa, maximo=15):
-    """Deduplica por RUTA de SPA (no por URL completa) y prioriza login/busqueda.
-    Asi /login, /admin#/login y /administrator#/login (misma vista) cuentan una vez."""
+    # Deduplica por RUTA de SPA (no por URL completa) y prioriza login/busqueda.
+    # Asi /login, /admin#/login y /administrator#/login (misma vista) cuentan una vez.
     vistos, salida = set(), []
     for e in sorted(mapa, key=lambda x: (not x["tiene_login"], not x["tiene_busqueda"],
                                          not x.get("tiene_formulario", False))):

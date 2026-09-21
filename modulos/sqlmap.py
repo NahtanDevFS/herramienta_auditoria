@@ -1,26 +1,7 @@
-"""
-sqlmap.py  (modulo de deteccion - A05: Injection)
-Envuelve sqlmap para detectar vulnerabilidades de inyeccion SQL en URLs con
-parametros. Es el modulo mas intrusivo del proyecto: sqlmap NO solo observa,
-sino que ATACA activamente enviando payloads de inyeccion SQL reales.
-
-Por eso, este modulo:
-  - Solo se ejecuta contra objetivos autorizados (como el resto, pero aqui es
-    especialmente importante).
-  - Usa una configuracion CONSERVADORA por defecto (level=1, risk=1): detecta
-    sin tecnicas agresivas que puedan dañar o alterar datos.
-  - Requiere URLs CON PARAMETROS (ej: /producto?id=1). Sin parametros, sqlmap
-    no tiene donde inyectar. Las URLs se definen en config.yaml (seccion
-    'sqlmap: urls'). Mas adelante, el crawler (Fase 4) podra alimentarlas.
-
-Que detecta:
-  - Parametros vulnerables a inyeccion SQL.
-  - El tipo de inyeccion (boolean-based, UNION, time-based, etc.).
-  - El motor de base de datos (DBMS) detectado.
-
-Patron de siempre:
-    def ejecutar(config, logger) -> list[Hallazgo]
-"""
+# sqlmap.py - Modulo de deteccion de inyecciones SQL (A05: Injection)
+# Envuelve sqlmap. A diferencia de otros modulos, ATACA activamente enviando payloads.
+# Usa una configuracion conservadora (level=1, risk=1) por defecto para no alterar datos.
+# Solo funciona si en config se definen URLs con parametros (ej. ?id=1).
 
 import logging
 import os
@@ -40,7 +21,7 @@ TIMEOUT_POR_URL = 180
 
 
 def _localizar_binario(logger) -> str | None:
-    """Busca sqlmap en el PATH y en ubicaciones habituales."""
+    # Busca sqlmap en el PATH y en ubicaciones habituales.
     ruta = shutil.which(BINARIO)
     if ruta:
         return ruta
@@ -57,12 +38,7 @@ def _localizar_binario(logger) -> str | None:
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    """
-    Punto de entrada del modulo (lo llama main.py).
-
-    Prueba cada URL con parametros definida en config y genera un Hallazgo
-    critico por cada inyeccion SQL confirmada.
-    """
+    # Punto de entrada. Prueba cada URL con parametros y genera Hallazgos criticos si hay inyeccion.
     conf_sqlmap = config.get("sqlmap", {})
     urls = conf_sqlmap.get("urls", []) or []
     timeout = conf_sqlmap.get("timeout", TIMEOUT_POR_URL)
@@ -116,10 +92,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 
 def _probar_url(ruta_binario, url, timeout, nivel, riesgo, user_agent, logger):
-    """
-    Ejecuta sqlmap contra UNA url y devuelve un Hallazgo si encuentra
-    inyeccion, o None si no.
-    """
+    # Ejecuta sqlmap contra UNA url y devuelve un Hallazgo si encuentra inyeccion, o None si no.
     comando = [
         ruta_binario,
         "-u", url,
@@ -159,13 +132,8 @@ def _probar_url(ruta_binario, url, timeout, nivel, riesgo, user_agent, logger):
 
 
 def _parsear_salida(salida: str, url: str, logger):
-    """
-    Analiza la salida de sqlmap. Si detecto inyeccion, extrae el parametro,
-    las tecnicas y el DBMS, y construye un Hallazgo critico.
-
-    sqlmap indica exito con la frase 'is vulnerable' y lista los puntos de
-    inyeccion en un bloque con 'Parameter:', 'Type:', 'Title:', 'Payload:'.
-    """
+    # Analiza la salida de sqlmap. Si detecto inyeccion (busca 'is vulnerable'),
+    # extrae parametro, tecnicas y DBMS para construir un Hallazgo critico.
     # ¿Encontro inyeccion? Buscamos las señales claras de sqlmap.
     vulnerable = (
         "is vulnerable" in salida
@@ -177,26 +145,26 @@ def _parsear_salida(salida: str, url: str, logger):
         logger.info(f"[sqlmap] No se detecto inyeccion SQL en {url}.")
         return None
 
-    # --- Extraer el parametro vulnerable ---
+    # Extraer el parametro vulnerable
     m_param = re.search(r"Parameter:\s*(.+?)\s*\(", salida)
     parametro = m_param.group(1).strip() if m_param else "desconocido"
 
-    # --- Extraer los tipos de inyeccion (puede haber varios) ---
+    # Extraer los tipos de inyeccion (puede haber varios)
     tipos = re.findall(r"Type:\s*(.+)", salida)
     tipos = [t.strip() for t in tipos]
     tipos_txt = ", ".join(dict.fromkeys(tipos)) if tipos else "no especificado"
 
-    # --- Extraer el titulo de la primera tecnica (mas descriptivo) ---
+    # Extraer el titulo de la primera tecnica (mas descriptivo)
     m_title = re.search(r"Title:\s*(.+)", salida)
     titulo_tecnica = m_title.group(1).strip() if m_title else ""
 
-    # --- Extraer el DBMS detectado ---
+    # Extraer el DBMS detectado
     m_dbms = re.search(r"back-end DBMS:\s*(.+)", salida)
     if not m_dbms:
         m_dbms = re.search(r"the back-end DBMS is\s*(.+)", salida)
     dbms = m_dbms.group(1).strip() if m_dbms else "desconocido"
 
-    # --- Extraer un payload de ejemplo (evidencia concreta) ---
+    # Extraer un payload de ejemplo (evidencia concreta)
     m_payload = re.search(r"Payload:\s*(.+)", salida)
     payload = m_payload.group(1).strip() if m_payload else ""
 

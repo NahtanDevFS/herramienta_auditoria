@@ -1,33 +1,6 @@
-"""
-nmap.py  (modulo de deteccion - A02: Security Misconfiguration)
-Escanea los puertos abiertos del objetivo e identifica los servicios que corren
-en ellos. Un puerto innecesariamente expuesto amplia la superficie de ataque,
-por eso encaja en A05 (mala configuracion).
-
-Que detecta:
-  - Puertos abiertos y el servicio/version que corre en cada uno.
-  - Servicios de riesgo expuestos a internet (bases de datos, escritorio
-    remoto, FTP, etc.) que normalmente NO deberian ser publicos.
-  - Servicios con protocolos inseguros (telnet, ftp sin cifrar).
-
-Decisiones de diseño importantes:
-
-  1. NO requiere sudo. El escaneo SYN (-sS) y la deteccion de SO necesitan
-     privilegios de root; usamos -sT (TCP connect), que funciona como usuario
-     normal. Es algo mas lento pero evita pedir sudo, lo que hace la
-     herramienta mas segura y portable.
-
-  2. Alcance acotado. Escanear los 65535 puertos tarda demasiado. Por defecto
-     usamos los 1000 puertos mas comunes (--top-ports 1000), configurable
-     desde config.yaml.
-
-  3. Usamos subprocess + salida XML en vez de la libreria python-nmap, que es
-     un wrapper que añade dependencias y a veces falla. Parsear el XML nativo
-     de nmap es mas fiable.
-
-Patron de siempre:
-    def ejecutar(config, logger) -> list[Hallazgo]
-"""
+# nmap.py - Modulo de escaneo de puertos (A02: Security Misconfiguration)
+# Detecta puertos abiertos y servicios de riesgo expuestos (bases de datos, RDP, FTP).
+# Usa nmap sin privilegios (-sT) y parsea la salida XML nativa.
 
 import logging
 import os
@@ -50,8 +23,7 @@ TOP_PORTS_DEFECTO = 1000
 # Timeout por defecto del escaneo completo, en segundos.
 TIMEOUT_DEFECTO = 300
 
-# Puertos que en un servidor web publico casi nunca deberian estar expuestos.
-# Cada entrada: puerto -> (nombre del servicio, severidad, cvss, motivo)
+# Puertos que en un servidor web casi nunca deberian estar expuestos.
 SERVICIOS_RIESGO = {
     21:    ("FTP", "media", 5.3,
             "FTP transmite credenciales y datos sin cifrar."),
@@ -96,11 +68,7 @@ SERVICIOS_RIESGO = {
 
 
 def _localizar_binario(logger) -> str | None:
-    """
-    Busca el binario de nmap: primero en el PATH, luego en ubicaciones
-    habituales. Mismo patron que usamos en el modulo de Nuclei, para no
-    depender de que el PATH este bien configurado.
-    """
+    # Busca el binario de nmap en el PATH y ubicaciones habituales.
     ruta = shutil.which(BINARIO)
     if ruta:
         return ruta
@@ -119,13 +87,7 @@ def _localizar_binario(logger) -> str | None:
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    """
-    Punto de entrada del modulo (lo llama main.py).
-
-    Escanea los puertos del host objetivo y genera:
-      - Un hallazgo informativo con el inventario de puertos/servicios abiertos.
-      - Un hallazgo por cada servicio de riesgo expuesto.
-    """
+    # Punto de entrada. Escanea puertos y genera hallazgos informativos y de riesgo.
     objetivo_url = config["objetivo"]["url"].strip()
     host = urlparse(objetivo_url).hostname
 
@@ -295,10 +257,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 
 def _parsear_xml(ruta_xml: str, logger) -> list[dict]:
-    """
-    Lee el XML generado por nmap y devuelve la lista de puertos abiertos.
-    Cada elemento: {puerto, protocolo, servicio, producto, version}
-    """
+    # Lee el XML generado por nmap y devuelve la lista de puertos abiertos.
     if not os.path.isfile(ruta_xml) or os.path.getsize(ruta_xml) == 0:
         logger.warning("[nmap] El archivo de salida XML esta vacio o no existe.")
         return []
@@ -336,7 +295,7 @@ def _parsear_xml(ruta_xml: str, logger) -> list[dict]:
 
 
 def _borrar(ruta: str) -> None:
-    """Elimina el archivo temporal, ignorando errores."""
+    # Elimina el archivo temporal, ignorando errores.
     try:
         os.unlink(ruta)
     except OSError:

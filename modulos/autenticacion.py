@@ -1,34 +1,6 @@
-"""
-autenticacion.py  (modulo de deteccion - A07: Authentication Failures)
-Analiza la POSTURA de seguridad de la autenticacion del objetivo, SIN realizar
-fuerza bruta real. En lugar de martillar el login con miles de contraseñas
-(agresivo, ineficaz y eticamente cuestionable), este modulo comprueba si
-existen los CONTROLES que deberian proteger el login:
-
-  1. Rate limiting / proteccion anti fuerza bruta:
-     Envia unos POCOS intentos fallidos (por defecto 5) y observa si el
-     servidor los frena (bloqueo, captcha, retraso, codigo 429). Si acepta
-     todos sin control, ESO es el hallazgo: falta proteccion.
-
-  2. Enumeracion de usuarios:
-     Comprueba si el sistema revela si un usuario existe (respuestas distintas
-     para 'usuario no existe' vs 'contraseña incorrecta').
-
-  3. Transmision de credenciales:
-     Verifica que el login se sirva por HTTPS y no por HTTP en claro.
-
-  4. Gestion de la cookie de sesion:
-     Revisa los flags de la cookie que se establece al interactuar con el login.
-
-Este enfoque es responsable (pocos intentos, no bloquea cuentas) y a la vez
-util: mide si las defensas correctas estan presentes.
-
-Requiere configuracion en config.yaml (seccion 'autenticacion') porque cada
-login es distinto. Sin 'url_login', el modulo se salta.
-
-Patron de siempre:
-    def ejecutar(config, logger) -> list[Hallazgo]
-"""
+# autenticacion.py - Modulo de deteccion (A07: Authentication Failures)
+# Analiza la postura de seguridad de la autenticacion SIN hacer fuerza bruta.
+# Comprueba rate limiting, enumeracion de usuarios, transmision y cookies.
 
 import logging
 import time
@@ -46,11 +18,8 @@ MAX_INTENTOS_DEFECTO = 5
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    """
-    Punto de entrada del modulo (lo llama main.py).
-
-    Analiza los controles de autenticacion del login configurado.
-    """
+    # Punto de entrada del modulo (lo llama main.py).
+    # Analiza los controles de autenticacion del login configurado.
     conf = config.get("autenticacion", {})
     url_login = conf.get("url_login", "").strip()
 
@@ -104,7 +73,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     sesion = requests.Session()
     sesion.headers.update(headers)
 
-    #2. Prueba de rate limiting (POCOS intentos fallidos)
+    # 2. Prueba de rate limiting (POCOS intentos fallidos)
     hallazgos.extend(
         _probar_rate_limiting(
             sesion, url_login, campo_usuario, campo_password,
@@ -112,7 +81,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         )
     )
 
-    #3. Enumeracion de usuarios (si se dio un usuario valido)
+    # 3. Enumeracion de usuarios (si se dio un usuario valido)
     if usuario_valido:
         hallazgos.extend(
             _probar_enumeracion(
@@ -126,7 +95,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
             "prueba de enumeracion de usuarios."
         )
 
-    #4. Gestion de la cookie de sesion
+    # 4. Gestion de la cookie de sesion
     hallazgos.extend(
         _revisar_cookie_sesion(sesion, url_login, logger)
     )
@@ -139,7 +108,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 def _intento_login(sesion, url, campo_u, campo_p, usuario, password,
                    timeout, verificar_ssl):
-    """Hace un intento de login y devuelve la respuesta (o None si falla)."""
+    # Hace un intento de login y devuelve la respuesta (o None si falla).
     datos = {campo_u: usuario, campo_p: password}
     try:
         return sesion.post(
@@ -152,10 +121,8 @@ def _intento_login(sesion, url, campo_u, campo_p, usuario, password,
 
 def _probar_rate_limiting(sesion, url, campo_u, campo_p, usuario,
                           max_intentos, timeout, verificar_ssl, logger):
-    """
-    Envia unos pocos intentos fallidos y observa si el servidor los frena.
-    Si acepta todos sin ningun control, reporta falta de rate limiting.
-    """
+    # Envia unos pocos intentos fallidos y observa si el servidor los frena.
+    # Si acepta todos sin ningun control, reporta falta de rate limiting.
     hallazgos = []
     logger.info(
         f"[autenticacion] Probando rate limiting con {max_intentos} intentos "
@@ -227,11 +194,8 @@ def _probar_rate_limiting(sesion, url, campo_u, campo_p, usuario,
 
 def _probar_enumeracion(sesion, url, campo_u, campo_p, usuario_valido,
                         usuario_invalido, timeout, verificar_ssl, logger):
-    """
-    Compara la respuesta ante un usuario valido vs uno inexistente (ambos con
-    contraseña incorrecta). Si difieren mucho, el sistema permite enumerar
-    usuarios.
-    """
+    # Compara la respuesta ante un usuario valido vs uno inexistente.
+    # Si difieren mucho, el sistema permite enumerar usuarios.
     hallazgos = []
     logger.info("[autenticacion] Probando enumeracion de usuarios...")
 
@@ -284,7 +248,7 @@ def _probar_enumeracion(sesion, url, campo_u, campo_p, usuario_valido,
 
 
 def _revisar_cookie_sesion(sesion, url, logger):
-    """Revisa los flags de las cookies de sesion establecidas durante el login."""
+    # Revisa los flags de las cookies de sesion establecidas durante el login.
     hallazgos = []
 
     # Las cookies acumuladas en la sesion tras los intentos anteriores.

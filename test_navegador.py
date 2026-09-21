@@ -1,23 +1,21 @@
-"""
-test_navegador.py  —  Prueba de CAPA 1 (modo navegador) sin tocar el agente principal.
-
-Corre un mini-agente que usa SOLO las herramientas de navegador (navegar,
-probar_login, tomar_captura) para intentar un bypass de autenticacion por
-inyeccion SQL en el login de OWASP Juice Shop, con tu modelo local.
-
-Al terminar veras:
-  - las capturas en   resultados/capturas/
-  - el video en       resultados/video/
-
-Requisitos previos:
-  1) Ollama corriendo con tu modelo (jonathanFS/pentest-owasp o pentest-owasp).
-  2) Juice Shop corriendo:  docker run --rm -p 3000:3000 bkimminich/juice-shop
-  3) pip install playwright ollama
-     playwright install chromium
-     playwright install-deps       # en WSL/Ubuntu, con sudo
-
-Ejecuta:  python test_navegador.py
-"""
+# test_navegador.py  —  Prueba de CAPA 1 (modo navegador) sin tocar el agente principal.
+# 
+# Corre un mini-agente que usa SOLO las herramientas de navegador (navegar,
+# probar_login, tomar_captura) para intentar un bypass de autenticacion por
+# inyeccion SQL en el login de OWASP Juice Shop, con tu modelo local.
+# 
+# Al terminar veras:
+#   - las capturas en   resultados/capturas/
+#   - el video en       resultados/video/
+# 
+# Requisitos previos:
+#   1) Ollama corriendo con tu modelo (jonathanFS/pentest-owasp o pentest-owasp).
+#   2) Juice Shop corriendo:  docker run --rm -p 3000:3000 bkimminich/juice-shop
+#   3) pip install playwright ollama
+#      playwright install chromium
+#      playwright install-deps       # en WSL/Ubuntu, con sudo
+# 
+# Ejecuta:  python test_navegador.py
 
 import json
 import logging
@@ -25,7 +23,7 @@ import logging
 from ollama import Client
 from modulos.navegador import NavegadorAgente, declarar_tools_navegador
 
-# --- Config de la prueba -----------------------------------------------------
+# Config de la prueba 
 URL_OBJETIVO = "http://localhost:3000"
 URL_LOGIN = "http://localhost:3000/#/login"
 MODELO = "jonathanFS/pentest-owasp"     # o "pentest-owasp"

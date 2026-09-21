@@ -1,16 +1,6 @@
-"""
-auditoria.py  (logica de auditoria reutilizable)
-Contiene la funcion central que ejecuta una auditoria a partir de un
-diccionario de configuracion. Se separa de main.py para que tanto la interfaz
-de linea de comandos (main.py) como la interfaz grafica (app_gui.py) puedan
-reutilizar exactamente la misma logica, sin duplicar codigo.
-
-Funcion principal:
-    ejecutar_auditoria(config, logger, callback_progreso=None) -> dict
-
-Devuelve el reporte construido (dict) con hallazgos y analisis de riesgo,
-listo para guardar en JSON o generar el informe HTML/PDF.
-"""
+# auditoria.py
+# Contiene la funcion central que ejecuta una auditoria a partir de un dict de config.
+# Se separa de main.py para reutilizar la misma logica en CLI y GUI.
 
 import logging
 import os
@@ -19,7 +9,7 @@ from core.reporte import Reporte
 from core.riesgo import MotorRiesgo
 
 
-# Lista de (clave_en_config, nombre_modulo, funcion) en el ORDEN de ejecucion.
+# Lista de (clave_en_config, nombre_modulo) en el ORDEN de ejecucion.
 # El crawler va antes que sqlmap para poder alimentarlo con URLs.
 # Cada entrada se importa de forma perezosa (solo si el modulo esta activo).
 ORDEN_MODULOS = [
@@ -41,16 +31,8 @@ ORDEN_MODULOS = [
 
 def ejecutar_auditoria(config: dict, logger: logging.Logger,
                        callback_progreso=None) -> dict:
-    """
-    Ejecuta la auditoria completa segun la configuracion dada.
-
-    config            : diccionario de configuracion (mismo formato que config.yaml).
-    logger            : logger para los mensajes.
-    callback_progreso : funcion opcional que se llama con (indice, total, nombre)
-                        antes de cada modulo. La usa la GUI para mostrar progreso.
-
-    Devuelve el reporte construido (dict) con hallazgos + analisis de riesgo.
-    """
+    # Ejecuta la auditoria completa segun la configuracion dada y devuelve
+    # el reporte construido con hallazgos + analisis de riesgo.
     objetivo = config["objetivo"]
     url = objetivo["url"].strip()
     nombre = objetivo.get("nombre", "")
@@ -73,8 +55,7 @@ def ejecutar_auditoria(config: dict, logger: logging.Logger,
         if nombre_modulo == "sqlmap":
             _alimentar_sqlmap_con_crawler(config, logger)
 
-        # Antes del agente de IA, pasarle los hallazgos ya acumulados para
-        # que pueda leerlos con la tool leer_hallazgo_previo.
+        # Antes del agente de IA, pasarle los hallazgos ya acumulados.
         if nombre_modulo == "agente_pentesting":
             config["_hallazgos_previos"] = [h.to_dict() for h in reporte.hallazgos]
 
@@ -105,7 +86,7 @@ def ejecutar_auditoria(config: dict, logger: logging.Logger,
 
 
 def _alimentar_sqlmap_con_crawler(config, logger):
-    """Pasa a sqlmap las URLs con parametros que descubrio el crawler."""
+    # Pasa a sqlmap las URLs con parametros que descubrio el crawler.
     ruta_urls = os.path.join(
         config.get("salida", {}).get("carpeta", "resultados"),
         "urls_con_parametros.txt"

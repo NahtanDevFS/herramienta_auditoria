@@ -1,27 +1,6 @@
-"""
-nuclei.py  (modulo de deteccion - A05, A02, A03, A07, A01, A10 y otros)
-Envuelve la herramienta externa Nuclei (https://github.com/projectdiscovery/nuclei),
-un escaner basado en miles de plantillas que detecta vulnerabilidades conocidas
-(CVE), malas configuraciones, exposiciones y tecnologias.
-
-Este modulo ESTRENA el patron "envolver un binario externo", que reutilizaremos
-para nmap, sqlmap y ZAP. Los pasos del patron son:
-
-  1. Comprobar que el binario existe en el sistema.
-  2. Construir el comando con las opciones adecuadas.
-  3. Ejecutarlo con subprocess, con un limite de tiempo (timeout).
-  4. Parsear su salida (aqui, JSON linea a linea con -jsonl).
-  5. Mapear cada resultado a nuestro objeto Hallazgo.
-  6. Manejar todos los errores posibles sin romper la auditoria.
-
-Nuclei puede tardar mucho (miles de plantillas), asi que por defecto:
-  - Solo escanea severidades medium, high y critical (se salta info/low).
-  - Aplica un timeout configurable.
-  Ambos ajustes se pueden cambiar desde config.yaml.
-
-Patron de siempre:
-    def ejecutar(config, logger) -> list[Hallazgo]
-"""
+# nuclei.py - Modulo de escaneo basado en plantillas Nuclei (A02, A03, A05, A06, etc)
+# Envuelve el binario externo 'nuclei' para detectar vulnerabilidades conocidas (CVE), exposiciones y malas configuraciones.
+# Solo escanea severidades media, alta y critica por defecto para ahorrar tiempo.
 
 import json
 import logging
@@ -57,11 +36,9 @@ MAPA_SEVERIDAD = {
     "unknown": Severidad.INFORMATIVA,
 }
 
-# Mapeo aproximado del tipo de plantilla a categoria OWASP.
-# La mayoria de hallazgos de Nuclei encajan en A06 (componentes vulnerables)
-# o A05 (malas configuraciones). Afinamos por tags cuando es posible.
+# Mapeo aproximado del tipo de plantilla a categoria OWASP segun los tags.
 def _categoria_desde_tags(tags: list[str], tiene_cve: bool) -> str:
-    """Decide la categoria OWASP mas adecuada segun los tags de la plantilla."""
+    # Decide la categoria OWASP mas adecuada segun los tags de la plantilla.
     tags_lower = {t.lower() for t in tags}
 
     if tags_lower & {"sqli", "xss", "rce", "injection", "lfi", "ssti", "cmdi"}:
@@ -79,14 +56,7 @@ def _categoria_desde_tags(tags: list[str], tiene_cve: bool) -> str:
 
 
 def _localizar_binario(logger) -> str | None:
-    """
-    Busca el binario de nuclei. Primero en el PATH; si no esta, en las
-    ubicaciones tipicas de instalacion (como ~/go/bin, donde 'go install' lo
-    coloca). Devuelve la ruta al binario o None si no se encuentra.
-
-    Esto hace el modulo robusto ante un PATH mal configurado, algo comun
-    cuando se ejecuta desde un entorno virtual que no hereda ~/go/bin.
-    """
+    # Busca el binario de nuclei en el PATH o ubicaciones habituales (~/go/bin).
     # 1. Buscar en el PATH normal.
     ruta = shutil.which(BINARIO)
     if ruta:
@@ -109,11 +79,7 @@ def _localizar_binario(logger) -> str | None:
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    """
-    Punto de entrada del modulo (lo llama main.py).
-
-    Ejecuta Nuclei contra el objetivo y convierte cada deteccion en un Hallazgo.
-    """
+    # Punto de entrada. Ejecuta Nuclei y convierte las detecciones en Hallazgos.
     objetivo = config["objetivo"]["url"].strip()
     opciones = config.get("opciones", {})
 
@@ -126,7 +92,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
     hallazgos: list[Hallazgo] = []
 
-    # --- Paso 1: comprobar que Nuclei esta instalado ---
+    #Paso 1: comprobar que Nuclei esta instalado
     ruta_binario = _localizar_binario(logger)
     if ruta_binario is None:
         logger.error(
@@ -136,7 +102,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         )
         return hallazgos
 
-    # --- Paso 2: construir el comando ---
+    #Paso 2: construir el comando
     comando = [
         ruta_binario,
         "-u", objetivo,
@@ -153,7 +119,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     )
     logger.debug(f"[nuclei] Comando: {' '.join(comando)}")
 
-    # --- Paso 3: ejecutar con subprocess y timeout ---
+    # Paso 3: ejecutar con subprocess y timeout
     try:
         proceso = subprocess.run(
             comando,
@@ -172,7 +138,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         logger.error(f"[nuclei] Error al ejecutar Nuclei: {e}")
         return hallazgos
 
-    # --- Paso 4 y 5: parsear la salida JSONL y mapear a Hallazgo ---
+    #Paso 4 y 5: parsear la salida JSONL y mapear a Hallazgo
     salida = proceso.stdout or ""
     lineas = [l for l in salida.splitlines() if l.strip()]
 
@@ -196,10 +162,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 
 def _parsear_linea(linea: str, objetivo: str, logger) -> Hallazgo | None:
-    """
-    Convierte una linea JSON de Nuclei en un objeto Hallazgo.
-    Devuelve None si la linea no se puede parsear.
-    """
+    # Convierte una linea JSON de Nuclei en un objeto Hallazgo o None.
     try:
         datos = json.loads(linea)
     except json.JSONDecodeError:

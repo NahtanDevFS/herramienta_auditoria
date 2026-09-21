@@ -1,23 +1,7 @@
-"""
-reporte_html.py  (generador de reporte HTML/PDF - Fase 6)
-Toma el reporte consolidado (hallazgos + analisis de riesgo) y produce un
-informe profesional en HTML y, opcionalmente, en PDF.
-
-El informe incluye:
-  - Portada con metadatos de la auditoria.
-  - Resumen ejecutivo con la valoracion global de riesgo.
-  - Grafico de distribucion de hallazgos por severidad.
-  - Matriz de riesgo (probabilidad x impacto) visual.
-  - Hallazgos agrupados por categoria OWASP, ordenados por severidad.
-
-Usa Jinja2 para la plantilla (separar logica de presentacion) y WeasyPrint
-para convertir el HTML a PDF (respeta el CSS, asi que el PDF se ve igual de
-bien que el HTML).
-
-Se llama con:
-    generar(datos_reporte, carpeta, formatos, logger)
-donde 'datos_reporte' es el dict que produce Reporte.construir().
-"""
+# reporte_html.py - Generador de reporte HTML/PDF (Fase 6)
+# Toma el reporte consolidado y produce un informe en HTML y PDF.
+# Usa Jinja2 para la plantilla y WeasyPrint para convertir HTML a PDF.
+# Se llama con: generar(datos_reporte, carpeta, formatos, logger)
 
 import logging
 import os
@@ -237,14 +221,11 @@ celda indica cuantos hallazgos caen en ese nivel de riesgo.</p>
 
 
 def generar(datos: dict, carpeta: str, formatos: list, logger: logging.Logger) -> list:
-    """
-    Genera el informe en los formatos pedidos.
-
-    datos    : dict de Reporte.construir() (metadatos, hallazgos, analisis_riesgo).
-    carpeta  : donde guardar los archivos.
-    formatos : lista con 'html' y/o 'pdf'.
-    Devuelve la lista de rutas de archivos generados.
-    """
+    # Genera el informe en los formatos pedidos.
+    # datos    : dict de Reporte.construir() (metadatos, hallazgos, analisis_riesgo).
+    # carpeta  : donde guardar los archivos.
+    # formatos : lista con 'html' y/o 'pdf'.
+    # Devuelve la lista de rutas de archivos generados.
     os.makedirs(carpeta, exist_ok=True)
     generados = []
 
@@ -281,7 +262,7 @@ def generar(datos: dict, carpeta: str, formatos: list, logger: logging.Logger) -
 
 
 def _preparar_contexto(datos: dict) -> dict:
-    """Transforma el dict del reporte en el contexto que espera la plantilla."""
+    # Transforma el dict del reporte en el contexto que espera la plantilla.
     meta = datos.get("metadatos", {})
     resumen_sev = datos.get("resumen_por_severidad", {})
     hallazgos = datos.get("hallazgos", [])

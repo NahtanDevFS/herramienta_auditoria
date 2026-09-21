@@ -1,20 +1,16 @@
-"""
-main.py
-Punto de entrada por linea de comandos de la herramienta de auditoria.
-
-Se encarga de:
-  1. Leer la configuracion (config.yaml).
-  2. Verificar que exista autorizacion para auditar (salvaguarda etica/legal).
-  3. Preparar el sistema de logging.
-  4. Delegar la ejecucion de la auditoria a auditoria.ejecutar_auditoria(),
-     la misma funcion que usa la interfaz grafica (app_gui.py), para no
-     duplicar la logica de orquestacion de modulos.
-  5. Guardar el reporte y generar el informe HTML/PDF.
-
-Uso:
-    python3 main.py
-    python3 main.py --config otra_config.yaml
-"""
+# main.py
+# Punto de entrada por linea de comandos de la herramienta de auditoria.
+#
+# Se encarga de:
+#   1. Leer la configuracion (config.yaml).
+#   2. Verificar que exista autorizacion para auditar (salvaguarda etica/legal).
+#   3. Preparar el sistema de logging.
+#   4. Delegar la ejecucion a auditoria.ejecutar_auditoria().
+#   5. Guardar el reporte y generar el informe HTML/PDF.
+#
+# Uso:
+#     python3 main.py
+#     python3 main.py --config otra_config.yaml
 
 import argparse
 import logging
@@ -26,7 +22,7 @@ from auditoria import ejecutar_auditoria
 
 
 def cargar_config(ruta: str) -> dict:
-    """Lee config.yaml y lo devuelve como diccionario."""
+    # Lee config.yaml y lo devuelve como diccionario.
     try:
         with open(ruta, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
@@ -46,10 +42,8 @@ def cargar_config(ruta: str) -> dict:
 
 
 def validar_config(config: dict) -> None:
-    """
-    Comprueba que la configuracion tenga lo minimo necesario para operar
-    y que se cumplan las salvaguardas antes de tocar el objetivo.
-    """
+    # Comprueba que la configuracion tenga lo minimo necesario para operar
+    # y que se cumplan las salvaguardas antes de tocar el objetivo.
     objetivo = config.get("objetivo", {})
     url = objetivo.get("url", "").strip()
 
@@ -73,7 +67,7 @@ def validar_config(config: dict) -> None:
 
 
 def configurar_logging(config: dict) -> logging.Logger:
-    """Prepara el logging (consola y, si se pide, archivo)."""
+    # Prepara el logging (consola y, si se pide, archivo).
     registro = config.get("registro", {})
     nivel_txt = registro.get("nivel", "INFO").upper()
     nivel = getattr(logging, nivel_txt, logging.INFO)

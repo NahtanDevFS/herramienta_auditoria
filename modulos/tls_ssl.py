@@ -1,21 +1,7 @@
-"""
-tls_ssl.py  (modulo de deteccion - A04: Cryptographic Failures)
-Analiza la configuracion TLS/SSL del objetivo usando la libreria sslyze.
-Detecta los problemas criptograficos mas comunes:
-
-  - Protocolos obsoletos habilitados (SSL 2.0, SSL 3.0, TLS 1.0, TLS 1.1).
-  - Certificado no confiable (cadena invalida o no reconocida).
-  - Certificado que no coincide con el hostname.
-  - Certificado caducado o proximo a caducar.
-  - Firma debil (SHA-1) en la cadena de confianza.
-
-Este modulo es distinto a los anteriores: no usa 'requests', sino sslyze,
-que abre conexiones TLS reales al puerto 443 y examina la negociacion a
-fondo. Solo tiene sentido para objetivos HTTPS.
-
-Mantiene el mismo patron de siempre:
-    def ejecutar(config, logger) -> list[Hallazgo]
-"""
+# tls_ssl.py - Modulo de deteccion (A04: Cryptographic Failures)
+# Analiza la configuracion TLS/SSL usando sslyze. Detecta protocolos obsoletos,
+# certificados caducados o no confiables, y firmas debiles.
+# Solo actua sobre objetivos HTTPS.
 
 import logging
 from datetime import datetime, timezone
@@ -42,12 +28,8 @@ PROTOCOLOS_OBSOLETOS = {
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    """
-    Punto de entrada del modulo (lo llama main.py).
-
-    Solo actua sobre objetivos HTTPS. Si el objetivo es HTTP, lo indica y
-    devuelve lista vacia (el analisis TLS no aplica).
-    """
+    # Punto de entrada del modulo (lo llama main.py).
+    # Solo actua sobre objetivos HTTPS. Si es HTTP, devuelve lista vacia.
     objetivo = config["objetivo"]["url"].strip()
     parsed = urlparse(objetivo)
 
@@ -66,7 +48,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
     logger.info(f"[tls_ssl] Analizando TLS/SSL de {hostname}:{puerto}")
 
-    # --- Importar sslyze de forma segura ---
+    # Importar sslyze de forma segura
     try:
         from sslyze import (
             Scanner, ServerScanRequest, ServerNetworkLocation, ScanCommand,
@@ -79,7 +61,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         )
         return hallazgos
 
-    # --- Preparar el escaneo ---
+    # Preparar el escaneo
     try:
         request = ServerScanRequest(
             server_location=ServerNetworkLocation(hostname=hostname, port=puerto),
@@ -100,7 +82,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     scanner = Scanner()
     scanner.queue_scans([request])
 
-    # --- Procesar resultados ---
+    # Procesar resultados
     for result in scanner.get_results():
         if result.scan_status.name != "COMPLETED":
             logger.error(
@@ -129,7 +111,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 
 def _revisar_protocolos(attempts, objetivo: str, logger) -> list[Hallazgo]:
-    """Genera un hallazgo por cada protocolo obsoleto que este habilitado."""
+    # Genera un hallazgo por cada protocolo obsoleto que este habilitado.
     hallazgos: list[Hallazgo] = []
 
     for atributo, (nombre, severidad, cvss) in PROTOCOLOS_OBSOLETOS.items():
@@ -167,7 +149,7 @@ def _revisar_protocolos(attempts, objetivo: str, logger) -> list[Hallazgo]:
 
 
 def _revisar_certificado(attempts, hostname, objetivo, logger) -> list[Hallazgo]:
-    """Analiza el certificado: confianza, hostname, caducidad y firma."""
+    # Analiza el certificado: confianza, hostname, caducidad y firma.
     hallazgos: list[Hallazgo] = []
 
     cert_intento = attempts.certificate_info
@@ -182,7 +164,7 @@ def _revisar_certificado(attempts, hostname, objetivo, logger) -> list[Hallazgo]
     dep = deployments[0]
     leaf = dep.received_certificate_chain[0]
 
-    # --- Confianza de la cadena ---
+    # Confianza de la cadena
     # path_validation_results valida el certificado frente a varios almacenes
     # de confianza (Mozilla, Apple, Windows...). Consideramos el certificado
     # NO confiable solo si falla en TODOS y ademas los errores indican un
@@ -244,7 +226,7 @@ def _revisar_certificado(attempts, hostname, objetivo, logger) -> list[Hallazgo]
                 f"Errores: {errores[:2]}"
             )
 
-    # --- Coincidencia con el hostname ---
+    # Coincidencia con el hostname
     # Usamos la libreria cryptography para comprobar si el hostname esta en
     # el certificado (CN o SAN).
     if not _hostname_coincide(leaf, hostname):
@@ -306,7 +288,7 @@ def _revisar_certificado(attempts, hostname, objetivo, logger) -> list[Hallazgo]
         ))
         logger.info(f"[tls_ssl] Certificado caduca en {dias_restantes} dias.")
 
-    # --- Firma SHA-1 (debil) en la cadena ---
+    # Firma SHA-1 (debil) en la cadena
     if dep.verified_chain_has_sha1_signature:
         hallazgos.append(Hallazgo(
             titulo="Cadena de certificados con firma SHA-1",
@@ -328,11 +310,8 @@ def _revisar_certificado(attempts, hostname, objetivo, logger) -> list[Hallazgo]
 
 
 def _hostname_coincide(certificado, hostname: str) -> bool:
-    """
-    Comprueba si el hostname aparece en el certificado (CN o SAN).
-    Devuelve True si coincide. Ante cualquier duda o error, devuelve True
-    para NO generar un falso positivo (preferimos no alarmar sin certeza).
-    """
+    # Comprueba si el hostname aparece en el certificado (CN o SAN).
+    # Devuelve True si coincide. Ante la duda, devuelve True para no dar falsos positivos.
     try:
         from cryptography.x509.oid import ExtensionOID
         # Buscar en los Subject Alternative Names (lo correcto hoy en dia).
@@ -362,7 +341,7 @@ def _hostname_coincide(certificado, hostname: str) -> bool:
 
 
 def _coincide_con_comodin(patron: str, hostname: str) -> bool:
-    """Compara un nombre del certificado (que puede ser *.dominio) con el host."""
+    # Compara un nombre del certificado (que puede ser *.dominio) con el host.
     patron = patron.lower().strip()
     hostname = hostname.lower().strip()
     if patron == hostname:

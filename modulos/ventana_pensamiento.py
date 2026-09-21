@@ -1,20 +1,6 @@
-"""
-ventana_pensamiento.py  —  Ventana emergente con el "hilo de pensamiento" del agente
-
-Muestra en una ventana FLOTANTE aparte (Tkinter) lo que el agente va pensando y
-haciendo en tiempo real: razonamiento, decisiones, resultados y hallazgos. Ideal
-para una demo presencial: flota junto a la ventana del navegador y se llena sola.
-
-Arquitectura: corre en un SUBPROCESO (Tkinter necesita su propio bucle y no puede
-convivir con el de Streamlit). El agente escribe eventos (una linea JSON por
-evento) en un archivo, y esta ventana lo va leyendo y mostrando.
-
-Uso (lo lanza el agente, no se corre a mano):
-    python -m modulos.ventana_pensamiento <archivo_eventos>
-
-La clase EmisorPensamiento (abajo) es la que usa el agente para lanzar la ventana
-y enviarle eventos.
-"""
+# ventana_pensamiento.py - Ventana flotante (Tkinter) del hilo de pensamiento del agente
+# Corre en un subproceso y lee eventos en tiempo real para mostrar razonamientos.
+# Uso interno: lanzado por EmisorPensamiento.
 
 import json
 import os
@@ -79,7 +65,7 @@ def _main_ventana(archivo):
 
 
 class EmisorPensamiento:
-    """Lanza la ventana en un subproceso y le envia eventos escribiendo en un archivo."""
+    # Lanza la ventana en un subproceso y le envia eventos escribiendo en un archivo.
 
     def __init__(self, activo=True, logger=None):
         self.activo = bool(activo)
@@ -118,8 +104,7 @@ class EmisorPensamiento:
             pass
 
     def cerrar(self):
-        # Se deja la ventana ABIERTA para que el publico siga leyendo; solo
-        # marcamos el fin. El usuario la cierra a mano cuando termina la demo.
+        # Deja la ventana ABIERTA para lectura; el usuario la cierra al final.
         self.emitir("fin", "")
         try:
             if self._f:

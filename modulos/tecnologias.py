@@ -1,26 +1,7 @@
-"""
-tecnologias.py  (modulo de deteccion - A03: Software Supply Chain Failures)
-Identifica las tecnologias que usa la web (servidor, lenguaje, framework, CMS,
-librerias JS) y, cuando es posible, sus VERSIONES.
-
-Por que importa (A06): conocer las versiones exactas es el primer paso para
-saber si el objetivo usa componentes con vulnerabilidades conocidas (CVE). Este
-modulo produce el inventario; el modulo de Nuclei (siguiente) lo complementa
-cruzando versiones con CVEs.
-
-Enfoque combinado (para maximizar la deteccion de versiones):
-  1. Wappalyzer      -> inventario amplio de tecnologias (que hay).
-  2. Cabeceras HTTP  -> versiones precisas de Server y X-Powered-By.
-  3. Meta 'generator'-> version de CMS (WordPress, Joomla, etc.).
-
-Genera:
-  - Un Hallazgo informativo con el inventario completo (siempre).
-  - Un Hallazgo por cada tecnologia cuya version este expuesta (util para A06),
-    con severidad baja: exponer versiones facilita al atacante buscar exploits.
-
-Patron de siempre:
-    def ejecutar(config, logger) -> list[Hallazgo]
-"""
+# tecnologias.py - Modulo de deteccion de tecnologias (A03: Software Supply Chain)
+# Identifica servidor, lenguaje, framework, CMS, librerias JS y sus versiones.
+# Combina Wappalyzer, cabeceras HTTP, meta generator y rutas de librerias JS.
+# Util para encontrar componentes con versiones vulnerables.
 
 import logging
 import re
@@ -34,11 +15,10 @@ from core.modelo_hallazgo import Hallazgo
 ORIGEN = "modulo_tecnologias"
 
 
-# -----------------------------------------------------------------------------
 # Patrones para extraer libreria + version de las rutas de scripts y estilos.
 # Los desarrolladores suelen dejar la version en el nombre del archivo o en la
 # URL del CDN, lo que es una fuente de versiones muy fiable para A06.
-# -----------------------------------------------------------------------------
+
 PATRONES_JS = [
     # Archivo local con version: /js/jquery-3.6.0.min.js  o  angular.1.8.2.js
     re.compile(r"/([a-zA-Z0-9_\-\.]+?)[-\.](\d+\.\d+(?:\.\d+)?)(?:\.min)?\.(?:js|css)", re.I),
@@ -54,12 +34,7 @@ IGNORAR_JS = {"app", "main", "index", "bundle", "script", "scripts", "style",
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    """
-    Punto de entrada del modulo (lo llama main.py).
-
-    Combina Wappalyzer + analisis de cabeceras + meta generator para producir
-    un inventario de tecnologias y detectar versiones expuestas.
-    """
+    # Punto de entrada. Combina Wappalyzer, cabeceras y meta generator para el inventario.
     objetivo = config["objetivo"]["url"].strip()
     opciones = config.get("opciones", {})
     timeout = opciones.get("timeout", 10)
@@ -73,7 +48,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     # tecnologias detectadas: nombre -> conjunto de versiones (puede ir vacio)
     inventario: dict[str, set] = {}
 
-    # --- Fuente 1: cabeceras HTTP (rapido y preciso para versiones) ---
+    # Fuente 1: cabeceras HTTP (rapido y preciso para versiones)
     try:
         resp = requests.get(
             objetivo,
@@ -90,16 +65,16 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         _analizar_cabeceras(resp, objetivo, inventario, logger)
     )
 
-    # --- Fuente 2: meta generator en el HTML ---
+    # Fuente 2: meta generator en el HTML
     _analizar_meta_generator(resp.text, inventario, logger)
 
-    # --- Fuente 3: versiones de librerias JS/CSS en el HTML ---
+    # Fuente 3: versiones de librerias JS/CSS en el HTML
     _analizar_librerias_js(resp.text, inventario, logger)
 
-    # --- Fuente 4: Wappalyzer (inventario amplio) ---
+    # Fuente 4: Wappalyzer (inventario amplio)
     _analizar_wappalyzer(objetivo, inventario, logger)
 
-    # --- Hallazgo informativo con el inventario completo ---
+    # Hallazgo informativo con el inventario completo
     if inventario:
         lineas = []
         for tech in sorted(inventario):
@@ -137,10 +112,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 
 def _limpiar_version(version: str) -> str | None:
-    """
-    Limpia una cadena de version dejando solo el numero (ej: '2.4.41').
-    Devuelve None si no hay un numero de version reconocible.
-    """
+    # Limpia una cadena de version dejando solo el numero (ej: '2.4.41').
     if not version:
         return None
     # Extraer el primer patron tipo X.Y o X.Y.Z del texto.
@@ -149,7 +121,7 @@ def _limpiar_version(version: str) -> str | None:
 
 
 def _agregar(inventario: dict, nombre: str, version: str | None = None) -> None:
-    """Añade una tecnologia (y opcionalmente su version) al inventario."""
+    # Añade una tecnologia (y opcionalmente su version) al inventario.
     # Limpiar el nombre de parentesis y comas sueltas.
     nombre = nombre.strip().strip("(),").strip()
     if not nombre or len(nombre) < 2:
@@ -163,10 +135,7 @@ def _agregar(inventario: dict, nombre: str, version: str | None = None) -> None:
 
 
 def _analizar_cabeceras(resp, objetivo, inventario, logger) -> list[Hallazgo]:
-    """
-    Extrae tecnologias y versiones de las cabeceras Server y X-Powered-By.
-    Genera un hallazgo por cada version expuesta (A06: baja severidad).
-    """
+    # Extrae tecnologias y versiones de las cabeceras Server y X-Powered-By.
     hallazgos: list[Hallazgo] = []
     headers = resp.headers
 
@@ -224,7 +193,7 @@ def _analizar_cabeceras(resp, objetivo, inventario, logger) -> list[Hallazgo]:
 
 
 def _analizar_meta_generator(html: str, inventario: dict, logger) -> None:
-    """Busca la etiqueta <meta name='generator'> que revela CMS y version."""
+    # Busca la etiqueta <meta name='generator'> que revela CMS y version.
     # Ejemplo: <meta name="generator" content="WordPress 6.4.2" />
     patron = re.compile(
         r'<meta[^>]*name=["\']generator["\'][^>]*content=["\']([^"\']+)["\']',
@@ -245,11 +214,7 @@ def _analizar_meta_generator(html: str, inventario: dict, logger) -> None:
 
 
 def _analizar_librerias_js(html: str, inventario: dict, logger) -> None:
-    """
-    Extrae librerias JS/CSS y sus versiones de los src/href del HTML.
-    Los nombres de archivo y las URLs de CDN suelen incluir la version
-    exacta, que es informacion muy valiosa para A06.
-    """
+    # Extrae librerias JS/CSS y sus versiones de los src/href del HTML.
     # Recoger todas las rutas de scripts y hojas de estilo.
     recursos = re.findall(r'(?:src|href)=["\']([^"\']+)["\']', html, re.IGNORECASE)
 
@@ -279,10 +244,7 @@ def _analizar_librerias_js(html: str, inventario: dict, logger) -> None:
 
 
 def _analizar_wappalyzer(objetivo, inventario, logger) -> None:
-    """
-    Usa Wappalyzer para un inventario amplio. Es opcional: si la libreria no
-    esta instalada o falla, el modulo sigue con lo detectado por otras fuentes.
-    """
+    # Usa Wappalyzer para un inventario amplio. Es opcional (falla suave).
     try:
         # Wappalyzer emite muchos warnings irrelevantes; los silenciamos.
         warnings.filterwarnings("ignore")

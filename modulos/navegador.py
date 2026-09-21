@@ -1,27 +1,6 @@
-"""
-navegador.py  —  Modo navegador AUTONOMO y GENERICO para el agente (CAPA 2)
-
-Da al agente un navegador real (Playwright) con herramientas GENERICAS que
-funcionan en CUALQUIER sitio web (no asume rutas ni tecnologias concretas):
-
-  - analizar_pagina : los "ojos". Devuelve un resumen COMPACTO de la pagina
-                      (formularios, campos, buscadores, enlaces con parametros)
-                      para que el modelo decida que atacar segun lo que hay.
-  - navegar         : abre una URL del objetivo y captura.
-  - probar_login    : rellena y envia un formulario de login (bypass SQLi).
-  - probar_busqueda : inyecta un payload en un input de busqueda/texto y detecta
-                      reflejo (XSS) o errores SQL.
-  - probar_idor     : navega variaciones del id de una URL (control de acceso).
-  - tomar_captura   : captura del estado actual.
-
-Cada accion toma una captura, y toda la sesion se graba en video.
-Guardarrailes: todo se restringe al dominio del objetivo.
-
-Requiere:
-    pip install playwright
-    playwright install chromium
-    playwright install-deps        # (WSL/Ubuntu; con sudo)
-"""
+# navegador.py - Modo navegador AUTONOMO y GENERICO para el agente (CAPA 2)
+# Da al agente un navegador real (Playwright) con herramientas genericas para explorar y probar inyecciones.
+# Se restringe al dominio del objetivo y graba en video.
 
 import os
 import re
@@ -132,11 +111,7 @@ class NavegadorAgente:
     # ----- herramientas de alto nivel (las llama el agente) -------------------
 
     def login_real(self, url_login, usuario, contrasena):
-        """
-        Inicia sesion con credenciales REALES (no payloads). Se usa como paso
-        previo para auditar la zona autenticada. Devuelve si logro entrar.
-        NOTA: las credenciales no se registran en logs ni en capturas de texto.
-        """
+        # Inicia sesion REAL con credenciales (no payloads) como paso previo a auditorias. Devuelve exito.
         try:
             self.navegar(url_login)
         except Exception:
@@ -194,11 +169,7 @@ class NavegadorAgente:
             return {"error": f"No se pudo navegar: {e}"}
 
     def analizar_pagina(self):
-        """
-        LOS OJOS. Devuelve un resumen compacto de la superficie de ataque de la
-        pagina actual, para que el modelo decida que probar (sin conocimiento
-        previo del sitio). Compacto a proposito: un 7B digiere mejor algo corto.
-        """
+        # LOS OJOS. Devuelve resumen compacto (formularios, buscadores, enlaces) para decidir que atacar.
         try:
             self._descartar_overlays()
             self._page.wait_for_timeout(800)  # asegura DOM pintado en SPAs
@@ -258,10 +229,7 @@ class NavegadorAgente:
             return {"error": f"No se pudo analizar la pagina: {e}"}
 
     def iniciar_sesion(self, url_login, usuario, contrasena):
-        """
-        Inicia sesion REAL con credenciales validas (no payloads). Se usa como paso
-        previo para auditar la zona autenticada. Devuelve si el login tuvo exito.
-        """
+        # Inicia sesion REAL con credenciales validas.
         try:
             self.navegar(url_login)
         except Exception:
@@ -354,12 +322,8 @@ class NavegadorAgente:
             return {"error": f"Error durante el login: {e}"}
 
     def probar_busqueda(self, payload):
-        """
-        Inyecta un payload en un campo de busqueda/texto y detecta si se refleja
-        (posible XSS) o si aparecen errores SQL (posible inyeccion SQL).
-        Si el payload contiene un script con alert(), escucha el evento 'dialog'
-        para confirmar ejecucion real (no solo reflejo textual).
-        """
+        # Inyecta payload en campo de busqueda/texto y detecta reflejo (XSS) o errores (SQLi).
+        # Escucha eventos dialog para confirmar XSS real.
         self._descartar_overlays()
         campo = self._encontrar([
             "input[type=search]", "input[name*=search i]", "input[id*=search i]",
@@ -414,10 +378,7 @@ class NavegadorAgente:
             return {"error": f"Error durante la busqueda: {e}"}
 
     def probar_idor(self, url):
-        """
-        Prueba control de acceso (IDOR): navega a una URL con id numerico y a una
-        variacion del id, y compara. El modelo interpreta si accedio a algo ajeno.
-        """
+        # Prueba IDOR: varia el id numerico de la URL original y compara respuesta.
         if not self._permitida(url):
             return {"error": "URL fuera del dominio autorizado."}
         from urllib.parse import urlparse, urlunparse
@@ -462,14 +423,8 @@ class NavegadorAgente:
             return {"error": f"Error durante la prueba IDOR: {e}"}
 
     def probar_formulario(self, payload):
-        """
-        Prueba inyeccion en un formulario GENERICO (contacto, feedback, perfil):
-        rellena el primer campo de texto/area no-password con el payload, lo envia,
-        y detecta reflejo (XSS) o errores SQL. Distinto de probar_busqueda (que
-        busca inputs de busqueda): esto ataca formularios de datos.
-        Si el payload contiene un script con alert(), escucha el evento 'dialog'
-        para confirmar ejecucion real.
-        """
+        # Prueba inyeccion en un formulario GENERICO de datos (contacto, perfil).
+        # Detecta reflejos/errores y confirma XSS con dialogs.
         self._descartar_overlays()
         campo = self._encontrar([
             "form textarea", "form input[type=text]", "form input[type=email]",
@@ -567,7 +522,7 @@ class NavegadorAgente:
 
 
 def declarar_tools_navegador():
-    """Tools genericas (funcionan en cualquier sitio). Alto nivel = faciles para un 7B."""
+    # Tools genericas de alto nivel (optimizadas para LLMs 7B-8B).
     return [
         {"type": "function", "function": {
             "name": "navegar",

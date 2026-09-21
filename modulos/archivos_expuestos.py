@@ -1,33 +1,7 @@
-"""
-archivos_expuestos.py  (modulo de deteccion - A02: Security Misconfiguration)
-Busca archivos y directorios sensibles que no deberian ser accesibles
-publicamente. Por cada uno que responda como accesible, genera un Hallazgo.
-
-Rutas que revisa (entre otras):
-  - .git/HEAD, .git/config : repositorio Git expuesto (permite descargar el
-                             codigo fuente completo).
-  - .env                   : variables de entorno (suelen contener claves,
-                             credenciales de base de datos, tokens).
-  - backups y dumps        : copias de seguridad o volcados de BD accesibles.
-  - archivos de config     : wp-config.php, config.php, etc.
-  - listado de directorios : carpetas que muestran su contenido.
-
-EL RETO DE ESTE MODULO: evitar FALSOS POSITIVOS. Muchos servidores devuelven
-una pagina (codigo 200) para CUALQUIER ruta, aunque el archivo no exista
-(tipico en aplicaciones de una sola pagina / SPA, o en paginas 404
-personalizadas que responden 200). Para no reportar archivos que en realidad
-no existen, el modulo:
-
-  1. Primero pide una ruta ALEATORIA que seguro no existe, y guarda como es
-     la respuesta "de archivo inexistente" (su tamaño y un fragmento).
-  2. Luego, al probar cada ruta sensible, la compara con esa referencia.
-     Si la respuesta es identica a la de "no existe", NO la reporta.
-  3. Ademas valida el CONTENIDO: por ejemplo, .git/HEAD solo se reporta si
-     su contenido realmente parece el de un HEAD de Git.
-
-Patron de siempre:
-    def ejecutar(config, logger) -> list[Hallazgo]
-"""
+# archivos_expuestos.py - Modulo de deteccion de archivos expuestos (A02: Security Misconfiguration)
+# Busca archivos sensibles accesibles (.git/HEAD, .env, backups, configs).
+# Estrategia anti-falsos-positivos: pide una ruta inexistente para usarla de
+# referencia y comprueba firmas en el contenido descargado.
 
 import logging
 import random
@@ -43,16 +17,8 @@ ORIGEN = "modulo_archivos_expuestos"
 
 
 # Rutas sensibles a comprobar.
-# Cada entrada define:
-#   ruta          : el path relativo a probar.
-#   titulo        : nombre del hallazgo.
-#   severidad     : gravedad si se encuentra expuesto.
-#   cvss          : puntuacion.
-#   descripcion   : que es y por que es peligroso.
-#   recomendacion : como corregirlo.
-#   firma         : (opcional) texto que DEBE aparecer en el contenido para
-#                   confirmar que es realmente ese archivo (anti falso positivo).
-# -----------------------------------------------------------------------------
+# Define la ruta, severidad, impacto y una 'firma' de texto obligatoria
+# para descartar falsos positivos que responden con HTTP 200 (ej. paginas 404 custom)
 RUTAS_SENSIBLES = [
     {
         "ruta": ".git/HEAD",
@@ -184,13 +150,13 @@ INDICIOS_LISTADO = ["index of /", "directory listing for", "<title>index of"]
 
 
 def _ruta_aleatoria() -> str:
-    """Genera un nombre de ruta aleatorio que casi con seguridad no existe."""
+    # Genera un nombre de ruta aleatorio que casi con seguridad no existe.
     aleatorio = "".join(random.choices(string.ascii_lowercase + string.digits, k=16))
     return f"{aleatorio}-noexiste.html"
 
 
 def _pedir(url, opciones, logger):
-    """Hace un GET seguro y devuelve la respuesta, o None si falla."""
+    # Hace un GET seguro y devuelve la respuesta, o None si falla.
     try:
         return requests.get(
             url,
@@ -205,14 +171,7 @@ def _pedir(url, opciones, logger):
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    """
-    Punto de entrada del modulo (lo llama main.py).
-
-    Estrategia anti-falsos-positivos:
-      1. Establece una "linea base" pidiendo una ruta que no existe.
-      2. Prueba cada ruta sensible y la compara con esa linea base.
-      3. Valida el contenido con la 'firma' cuando esta definida.
-    """
+    # Punto de entrada. Aplica estrategia de linea base y pruebas con firma.
     objetivo = config["objetivo"]["url"].strip()
     if not objetivo.endswith("/"):
         objetivo += "/"
@@ -241,7 +200,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         f"HTTP {codigo_inexistente} ({long_inexistente} bytes)."
     )
 
-    #Paso 2 probar cada ruta sensible
+    # Paso 2: probar cada ruta sensible
     for item in RUTAS_SENSIBLES:
         url = urljoin(objetivo, item["ruta"])
         resp = _pedir(url, opciones, logger)

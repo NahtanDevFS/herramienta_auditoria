@@ -1,8 +1,6 @@
-"""
-riesgo.py — Motor de analisis de riesgos.
-Toma la lista de hallazgos y produce: normalizacion de CVSS, matriz de
-riesgo (probabilidad x impacto) y metricas agregadas.
-"""
+# riesgo.py — Motor de analisis de riesgos.
+# Toma la lista de hallazgos y produce: normalizacion de CVSS, matriz de
+# riesgo (probabilidad x impacto) y metricas agregadas.
 
 from core.modelo_hallazgo import Hallazgo, Severidad
 

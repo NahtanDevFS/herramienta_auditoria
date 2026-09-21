@@ -1,15 +1,6 @@
-"""
-reporte.py
-Consolida todos los hallazgos de la auditoria y los guarda en disco.
-
-En esta fase (Fase 1) genera un reporte en formato JSON. Ese JSON contiene:
-  - Metadatos de la auditoria (objetivo, fecha, duracion).
-  - Un resumen con el conteo de hallazgos por severidad.
-  - La lista completa de hallazgos.
-
-Mas adelante (Fase 6) añadiremos a este mismo modulo la generacion de
-reportes en HTML y PDF, reutilizando la estructura que armamos aqui.
-"""
+# reporte.py - Consolida todos los hallazgos de la auditoria y los guarda.
+# En esta fase genera un reporte en JSON con metadatos, resumen y lista de hallazgos.
+# Reutilizable para la posterior generacion de reportes HTML y PDF.
 
 import json
 import os
@@ -32,22 +23,11 @@ ORDEN_SEVERIDAD = {
 
 
 class Reporte:
-    """
-    Acumula hallazgos durante la auditoria y los exporta al final.
-
-    Uso tipico:
-        rep = Reporte(objetivo="http://web.local", nombre="Web de prueba")
-        rep.agregar(un_hallazgo)
-        rep.agregar_varios(lista_de_hallazgos)
-        rep.finalizar()
-        ruta = rep.guardar_json("resultados")
-    """
+    # Acumula hallazgos durante la auditoria y los exporta al final.
 
     def __init__(self, objetivo: str, nombre: str = ""):
-        """
-        objetivo : URL de la web auditada.
-        nombre   : Nombre descriptivo del objetivo (para el reporte).
-        """
+        # objetivo : URL de la web auditada.
+        # nombre   : Nombre descriptivo del objetivo (para el reporte).
         self.objetivo = objetivo
         self.nombre = nombre
         self.hallazgos: list[Hallazgo] = []
@@ -56,11 +36,11 @@ class Reporte:
         self.analisis_riesgo = None
     
     def set_analisis_riesgo(self, analisis: dict) -> None:
-        """Guarda el analisis de riesgos (de la Fase 5) para incluirlo en el reporte."""
+        # Guarda el analisis de riesgos (de la Fase 5) para incluirlo en el reporte.
         self.analisis_riesgo = analisis
 
     def agregar(self, hallazgo: Hallazgo) -> None:
-        """Añade un unico hallazgo al reporte."""
+        # Añade un unico hallazgo al reporte.
         if not isinstance(hallazgo, Hallazgo):
             raise TypeError(
                 f"Se esperaba un objeto Hallazgo, se recibio: {type(hallazgo)}"
@@ -68,19 +48,17 @@ class Reporte:
         self.hallazgos.append(hallazgo)
 
     def agregar_varios(self, hallazgos: list[Hallazgo]) -> None:
-        """Añade una lista de hallazgos de golpe (lo que devuelve un modulo)."""
+        # Añade una lista de hallazgos de golpe (lo que devuelve un modulo).
         for h in hallazgos:
             self.agregar(h)
 
     def finalizar(self) -> None:
-        """Marca el fin de la auditoria (para calcular la duracion)."""
+        # Marca el fin de la auditoria (para calcular la duracion).
         self.fin = datetime.now()
 
     def _resumen_por_severidad(self) -> dict:
-        """
-        Cuenta cuantos hallazgos hay de cada severidad.
-        Devuelve algo como: {"critica": 1, "alta": 3, "media": 0, ...}
-        """
+        # Cuenta cuantos hallazgos hay de cada severidad.
+        # Devuelve algo como: {"critica": 1, "alta": 3, "media": 0, ...}
         # Arrancamos el conteo en 0 para todas las severidades, para que
         # siempre aparezcan todas en el reporte aunque sean cero.
         conteo = {sev.value: 0 for sev in Severidad}
@@ -89,18 +67,16 @@ class Reporte:
         return conteo
 
     def _hallazgos_ordenados(self) -> list[Hallazgo]:
-        """Devuelve los hallazgos ordenados de mas grave a menos grave."""
+        # Devuelve los hallazgos ordenados de mas grave a menos grave.
         return sorted(
             self.hallazgos,
             key=lambda h: ORDEN_SEVERIDAD[h.severidad],
         )
 
     def construir(self) -> dict:
-        """
-        Arma el diccionario completo del reporte, listo para volcar a JSON.
-        Esta es la estructura central que luego consumira el reporte HTML/PDF.
-        """
-        #Si no se llamo a finalizar(), lo hacemos ahora para tener una duracion
+        # Arma el diccionario completo del reporte, listo para volcar a JSON.
+        # Esta es la estructura central que luego consumira el reporte HTML/PDF.
+        # Si no se llamo a finalizar(), lo hacemos ahora para tener una duracion
         if self.fin is None:
             self.finalizar()
 
@@ -126,13 +102,8 @@ class Reporte:
         return datos
 
     def guardar_json(self, carpeta: str = "resultados") -> str:
-        """
-        Guarda el reporte como archivo JSON dentro de la carpeta indicada.
-        El nombre del archivo incluye la fecha y hora para no sobrescribir
-        auditorias anteriores.
-
-        Devuelve la ruta del archivo creado.
-        """
+        # Guarda el reporte como archivo JSON dentro de la carpeta indicada.
+        # El nombre del archivo incluye la fecha y hora. Devuelve la ruta.
         # Crea la carpeta si no existe (exist_ok evita error si ya existe).
         os.makedirs(carpeta, exist_ok=True)
 
@@ -143,15 +114,14 @@ class Reporte:
 
         datos = self.construir()
 
-        # ensure_ascii=False para que las tildes y ñ se guarden legibles.
-        # indent=2 para que el JSON quede formateado y facil de leer.
+        # ensure_ascii=False para tildes. indent=2 para formateo legible.
         with open(ruta, "w", encoding="utf-8") as f:
             json.dump(datos, f, ensure_ascii=False, indent=2)
 
         return ruta
 
     def imprimir_resumen(self) -> None:
-        """Muestra un resumen rapido por consola al terminar la auditoria."""
+        # Muestra un resumen rapido por consola al terminar la auditoria.
         datos = self.construir()
         meta = datos["metadatos"]
         resumen = datos["resumen_por_severidad"]

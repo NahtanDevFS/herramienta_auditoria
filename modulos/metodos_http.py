@@ -1,22 +1,6 @@
-"""
-metodos_http.py  (modulo de deteccion - A01: Broken Access Control)
-Comprueba dos problemas relacionados con el control de acceso:
-
-  1. METODOS HTTP PELIGROSOS habilitados:
-     - PUT / DELETE : permiten subir o borrar archivos si no estan protegidos.
-     - TRACE        : puede facilitar ataques de Cross-Site Tracing (XST).
-     - CONNECT      : puede permitir usar el servidor como proxy.
-     El modulo pregunta al servidor que metodos permite (via OPTIONS) y ademas
-     prueba activamente algunos para confirmar.
-
-  2. PATH TRAVERSAL:
-     Intenta acceder a archivos del sistema fuera del directorio web usando
-     secuencias como '../../../etc/passwd'. Si el servidor los devuelve, es
-     vulnerable.
-
-Patron de siempre:
-    def ejecutar(config, logger) -> list[Hallazgo]
-"""
+# metodos_http.py - Modulo de deteccion (A01: Broken Access Control)
+# Comprueba metodos HTTP peligrosos (PUT, DELETE, TRACE) via OPTIONS.
+# Prueba vulnerabilidades de Path Traversal intentando leer archivos del sistema.
 
 import logging
 from urllib.parse import urljoin, urlparse
@@ -63,11 +47,7 @@ FIRMAS_TRAVERSAL = {
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    """
-    Punto de entrada del modulo (lo llama main.py).
-
-    Comprueba metodos HTTP peligrosos y prueba path traversal en el objetivo.
-    """
+    # Punto de entrada. Comprueba metodos peligrosos y path traversal en el objetivo.
     objetivo = config["objetivo"]["url"].strip()
     opciones = config.get("opciones", {})
     timeout = opciones.get("timeout", 10)
@@ -96,7 +76,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 
 def _revisar_metodos(objetivo, headers, timeout, verificar_ssl, logger):
-    """Consulta con OPTIONS que metodos permite el servidor y los evalua."""
+    # Consulta con OPTIONS que metodos permite el servidor y los evalua.
     hallazgos = []
 
     # 1. Preguntar via OPTIONS que metodos declara el servidor.
@@ -153,7 +133,7 @@ def _revisar_metodos(objetivo, headers, timeout, verificar_ssl, logger):
 
 
 def _probar_path_traversal(objetivo, headers, timeout, verificar_ssl, logger):
-    """Intenta leer archivos del sistema mediante secuencias de path traversal."""
+    # Intenta leer archivos del sistema mediante secuencias de path traversal.
     hallazgos = []
 
     # Probaremos los payloads sobre la ruta base del objetivo.

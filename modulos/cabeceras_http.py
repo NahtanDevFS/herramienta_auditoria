@@ -1,28 +1,7 @@
-"""
-cabeceras_http.py  (modulo de deteccion - A02: Security Misconfiguration)
-Revisa las cabeceras HTTP de seguridad que debe enviar un servidor web bien
-configurado. Por cada cabecera recomendada que falte (o este mal puesta),
-genera un objeto Hallazgo.
-
-Es el primer modulo "real" del proyecto y sirve de PLANTILLA para los demas:
-todos los modulos de deteccion seguiran esta misma forma:
-
-    def ejecutar(config, logger) -> list[Hallazgo]:
-        ... hace su trabajo ...
-        return lista_de_hallazgos
-
-El orquestador (main.py) llama a 'ejecutar', recoge la lista devuelta y la
-suma al reporte. Ningun modulo guarda nada por su cuenta: solo detecta y
-devuelve hallazgos.
-
-Cabeceras que revisamos y por que importan:
-  - Content-Security-Policy      : mitiga XSS e inyeccion de contenido.
-  - Strict-Transport-Security    : fuerza HTTPS (evita downgrade a HTTP).
-  - X-Frame-Options              : evita clickjacking (embeber la web en iframe).
-  - X-Content-Type-Options       : evita que el navegador "adivine" tipos MIME.
-  - Referrer-Policy              : controla que info de referencia se filtra.
-  - Permissions-Policy           : limita APIs del navegador (camara, micro...).
-"""
+# cabeceras_http.py - Modulo de deteccion (A02: Security Misconfiguration)
+# Revisa las cabeceras HTTP de seguridad que debe enviar un servidor web bien configurado.
+# Genera un Hallazgo por cada cabecera recomendada ausente (CSP, HSTS, X-Frame-Options, etc.).
+# Este modulo sirve de PLANTILLA basica para los demas modulos de deteccion.
 
 import logging
 
@@ -39,7 +18,6 @@ ORIGEN = "modulo_cabeceras_http"
 
 # Definicion de las cabeceras a revisar.
 # Cada entrada describe: severidad si falta, descripcion, recomendacion y CVSS.
-# Tener esto como datos (y no como codigo repetido) hace facil añadir mas.
 CABECERAS_SEGURIDAD = {
     "Content-Security-Policy": {
         "severidad": "alta",
@@ -121,16 +99,8 @@ CABECERAS_SEGURIDAD = {
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    """
-    Punto de entrada del modulo (lo llama main.py).
-
-    Hace una peticion GET a la URL objetivo, examina las cabeceras de la
-    respuesta y devuelve una lista de Hallazgo por cada cabecera de seguridad
-    ausente.
-
-    Devuelve lista vacia si la web tiene todas las cabeceras o si no se pudo
-    conectar (el error se registra en el log).
-    """
+    # Punto de entrada del modulo (lo llama main.py).
+    # Hace peticion GET y devuelve lista de Hallazgos por cabeceras ausentes.
     objetivo = config["objetivo"]["url"].strip()
     opciones = config.get("opciones", {})
     timeout = opciones.get("timeout", 10)
@@ -141,7 +111,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
     hallazgos: list[Hallazgo] = []
 
-    # Peticion HTTP con manejo de errores 
+    # Peticion HTTP con manejo de errores
     try:
         respuesta = requests.get(
             objetivo,
@@ -161,11 +131,10 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         logger.error(f"[cabeceras_http] No se pudo conectar con {objetivo}: {e}")
         return hallazgos
 
-    # Las claves de las cabeceras en requests son insensibles a mayusculas,
-    # asi que podemos consultarlas directamente por su nombre.
+    # Las claves de las cabeceras en requests son insensibles a mayusculas.
     cabeceras_presentes = respuesta.headers
 
-    #Revisar cada cabecera de seguridad
+    # Revisar cada cabecera de seguridad
     for nombre, info in CABECERAS_SEGURIDAD.items():
         if nombre not in cabeceras_presentes:
             hallazgos.append(Hallazgo(

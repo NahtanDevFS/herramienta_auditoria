@@ -1,22 +1,6 @@
-"""
-crawler.py  (modulo de reconocimiento - Recon / base para A05)
-
-Rastrea el sitio objetivo para descubrir rutas, formularios y parametros.
-El rastreo con RENDERIZADO DE JAVASCRIPT (Playwright) se ejecuta en un
-SUBPROCESO aparte (modulos/crawler_worker.py), porque Playwright sincrono no
-puede correr dentro del bucle de asyncio de Streamlit. El worker escribe su
-resultado en un JSON temporal que este modulo lee.
-
-Si el subproceso falla o Playwright no esta, cae a un rastreo HTTP clasico
-(requests + BeautifulSoup), que en SPAs vera poco pero no rompe.
-
-Valor:
-  1. Hallazgos informativos: mapa del sitio, formularios, URLs con parametros.
-  2. urls_con_parametros.txt para sqlmap.
-  3. config["_mapa_sitio"]: mapa estructurado que el agente de IA usa de contexto.
-
-Patron de siempre:  def ejecutar(config, logger) -> list[Hallazgo]
-"""
+# crawler.py - Modulo de reconocimiento (Recon / base para A05)
+# Rastrea el sitio objetivo para descubrir rutas, formularios y parametros.
+# Usa Playwright (en un subproceso aislado) para renderizar JS, con un fallback a HTTP puro.
 
 import json
 import logging
@@ -84,9 +68,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     return _construir_hallazgos(objetivo, rutas, formularios, urls_param, logger)
 
 
-# ---------------------------------------------------------------------------
-# Rastreo con navegador, AISLADO en subproceso (evita el choque con Streamlit)
-# ---------------------------------------------------------------------------
+# --- Rastreo con navegador (Subproceso aislado) ---
 def _rastrear_con_subproceso(objetivo, max_paginas, max_prof, logger):
     tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
     tmp.close()
@@ -121,9 +103,7 @@ def _rastrear_con_subproceso(objetivo, max_paginas, max_prof, logger):
             pass
 
 
-# ---------------------------------------------------------------------------
-# Rastreo HTTP clasico (fallback)
-# ---------------------------------------------------------------------------
+# --- Rastreo HTTP clasico (Fallback) ---
 def _rastrear_con_http(objetivo, dominio, max_paginas, max_prof, config, logger):
     import requests
     from bs4 import BeautifulSoup
@@ -189,9 +169,7 @@ def _rastrear_con_http(objetivo, dominio, max_paginas, max_prof, config, logger)
             "formularios": formularios, "mapa": mapa}
 
 
-# ---------------------------------------------------------------------------
-# Auxiliares
-# ---------------------------------------------------------------------------
+# --- Auxiliares ---
 def _extraer_formulario_bs(form, url_pagina):
     action = form.get("action", "")
     metodo = form.get("method", "get").upper()
