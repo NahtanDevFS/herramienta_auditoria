@@ -78,7 +78,7 @@ with st.sidebar:
 
     modulos_activos = {}
     for clave, (titulo, desc) in MODULOS_INFO.items():
-        default = clave not in ("zap", "nmap", "sqlmap", "puertos_nmap", "agente_ia")
+        default = clave not in ("zap", "nmap", "sqlmap", "puertos_nmap")
         modulos_activos[clave] = st.checkbox(
             titulo, value=st.session_state.get(f"mod_{clave}", default),
             key=f"mod_{clave}", help=desc,
@@ -95,8 +95,8 @@ with st.sidebar:
     modelo_ollama = "jonathanFS/pentest-owasp"
     host_ollama = "http://localhost:11434"
     usar_navegador = True
-    abrir_ventana = False
-    ventana_pensamiento = False
+    abrir_ventana = True
+    ventana_pensamiento = True
     cred_usuario = ""
     cred_contrasena = ""
     limite_acciones_agente = 20
@@ -113,12 +113,12 @@ with st.sidebar:
         )
         if usar_navegador:
             abrir_ventana = st.checkbox(
-                "Abrir ventana del navegador (verlo en vivo)", value=False,
+                "Abrir ventana del navegador (verlo en vivo)", value=True,
                 help="Abre una ventana de Chrome visible mientras el agente actua. "
                      "En WSL requiere WSLg (Windows 11). Si no hay pantalla, cae a modo oculto.",
             )
         ventana_pensamiento = st.checkbox(
-            "Ventana de pensamiento del agente", value=False,
+            "Ventana de pensamiento del agente", value=True,
             help="Abre una ventana flotante que muestra en vivo el razonamiento del "
                  "agente (que piensa, que decide, que confirma). En WSL requiere WSLg.",
         )
@@ -188,33 +188,33 @@ if lanzar:
     barra = st.progress(0, text="Preparando auditoria...")
     estado = st.empty()
 
+    # --- Panel de Logs en vivo ---
+    st.markdown("**Terminal de progreso**")
+    log_box = st.empty()
+    
+    class StreamlitLogHandler(logging.Handler):
+        def __init__(self, placeholder):
+            super().__init__()
+            self.placeholder = placeholder
+            self.logs = []
+        def emit(self, record):
+            msg = self.format(record)
+            self.logs.append(msg)
+            # Mantener solo unas pocas lineas para que quede de un tamano fijo y no empuje la UI
+            if len(self.logs) > 4:
+                self.logs.pop(0)
+            self.placeholder.code("\n".join(self.logs), language="text")
+            
+    st_handler = StreamlitLogHandler(log_box)
+    st_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S"))
+    logger.addHandler(st_handler)
+
     def callback(indice, total, nombre_modulo):
         pct = int(indice / max(total, 1) * 100)
         barra.progress(pct, text=f"Ejecutando: {nombre_modulo} ({indice}/{total})")
         estado.info(f"En curso: **{nombre_modulo}**")
 
-    # --- Panel EN VIVO del agente navegador ---
-    panel = st.container()
-    with panel:
-        st.subheader("Agente en vivo")
-        col_izq, col_der = st.columns([1, 2])
-        log_ph = col_izq.empty()
-        img_ph = col_der.empty()
-        img_ph.info("Cuando el agente use el navegador, veras aqui sus acciones.")
 
-    pasos = []
-
-    def callback_visual(ruta_png, etiqueta):
-        """Se llama en cada captura del navegador: actualiza el panel en vivo."""
-        pasos.append(etiqueta)
-        lineas = "\n\n".join(f"**{i+1}.** {p}" for i, p in enumerate(pasos))
-        log_ph.markdown(lineas)
-        try:
-            img_ph.image(ruta_png, width='stretch')
-        except Exception:
-            pass
-
-    config["_callback_visual"] = callback_visual
 
     with st.spinner("Auditoria en curso... esto puede tardar varios minutos."):
         reporte = ejecutar_auditoria(config, logger, callback_progreso=callback)
@@ -269,8 +269,8 @@ if "datos_reporte" in st.session_state:
     # --- Video del agente (si existe) ---
     video_agente = st.session_state.get("video_agente")
     if video_agente and os.path.isfile(video_agente):
-        st.subheader("Grabacion de las acciones del agente")
-        st.video(video_agente)
+        with st.expander("Ver Grabacion de la Sesion del Agente", expanded=False):
+            st.video(video_agente)
 
     st.subheader("Distribucion por severidad")
     cols = st.columns(5)
