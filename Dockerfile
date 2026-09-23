@@ -5,11 +5,6 @@ FROM python:3.11-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
 # 1. Instalar herramientas del sistema y dependencias de terceros
-# - nmap: para escaneo de puertos
-# - sqlmap: para inyeccion SQL
-# - default-jre: necesario para OWASP ZAP (Java)
-# - dependencias de WeasyPrint para PDF (libpango, libgdk-pixbuf, etc.)
-# - wget, unzip: para descargar Nuclei y ZAP
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     curl \
@@ -43,7 +38,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 6. Instalar Playwright (Navegador Chromium y sus dependencias del sistema)
+# 6. Instalar Playwright (Navegador Chromium)
 RUN playwright install chromium
 RUN playwright install-deps
 
@@ -54,5 +49,4 @@ COPY . .
 EXPOSE 8501
 
 # 9. Comando por defecto: Lanzar la GUI
-# El host se establece en 0.0.0.0 para que sea accesible desde fuera del contenedor
 CMD ["streamlit", "run", "app_gui.py", "--server.port=8501", "--server.address=0.0.0.0"]
