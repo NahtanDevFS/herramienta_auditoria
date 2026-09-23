@@ -148,11 +148,6 @@ if not url:
     st.info("Introduce una URL objetivo en la barra lateral para comenzar.")
     st.stop()
 
-if modulos_activos.get("agente_ia") and usar_navegador and abrir_ventana:
-    st.markdown("**Monitor en Vivo (Escritorio Virtual Linux)**")
-    import streamlit.components.v1 as components
-    components.iframe(src="http://localhost:8080/vnc.html?autoconnect=true&resize=scale", width=1280, height=720)
-    st.caption("Si no ves la imagen, asegúrate de haber mapeado el puerto 8080 al lanzar Docker (-p 8080:8080).")
 
 if lanzar:
     if not (url.startswith("http://") or url.startswith("https://")):
@@ -220,6 +215,24 @@ if lanzar:
         estado.info(f"En curso: **{nombre_modulo}**")
 
 
+    # --- Monitor en Vivo (desplegable, debajo de la terminal) ---
+    if config["agente_ia"].get("activo") and not config["agente_ia"].get("headless"):
+        import streamlit.components.v1 as components
+        with st.expander("Monitor en Vivo (Escritorio Virtual)", expanded=True):
+            # HTML responsivo: el iframe ocupa el 100% del ancho disponible
+            # con una relacion de aspecto 16:9 para mantener la proporcion.
+            vnc_html = """
+            <div style="position:relative;width:100%;padding-bottom:56.25%;overflow:hidden;">
+                <iframe
+                    src="http://localhost:8080/vnc.html?autoconnect=true&resize=scale"
+                    style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;"
+                    allowfullscreen>
+                </iframe>
+            </div>
+            """
+            components.html(vnc_html, height=600)
+            st.caption("Puedes colapsar este panel con la flecha de arriba. "
+                       "Si no ves imagen, verifica que mapeaste -p 8080:8080.")
 
     with st.spinner("Auditoria en curso... esto puede tardar varios minutos."):
         reporte = ejecutar_auditoria(config, logger, callback_progreso=callback)
