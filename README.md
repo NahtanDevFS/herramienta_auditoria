@@ -90,44 +90,53 @@ streamlit run app_gui.py
 
 ## Uso
 
-### 1. Configura el objetivo
+### 1. Levanta un objetivo de práctica (opcional)
 
-Edita `config.yaml`:
-
-```yaml
-objetivo:
-  url: "http://localhost:3000"      # tu objetivo autorizado
-  autorizacion_confirmada: true     # OBLIGATORIO para ejecutar
-
-agente_ia:
-  activo: true
-  modelo: "jonathanFS/pentest-owasp"
-  host: "http://localhost:11434"    # en Docker: http://ollama:11434
-  limite_acciones: 20               # tope de acciones del agente por sesión
-  timeout_sesion_seg: 600
-```
-
-Activa o desactiva módulos en la sección `modulos:` del archivo.
-
-### 2. Levanta un objetivo de práctica (opcional)
+Si no tienes un sitio propio para auditar, puedes usar OWASP Juice Shop:
 
 ```bash
-docker run --rm -p 3000:3000 bkimminich/juice-shop   # OWASP Juice Shop
-# o sin Docker:  npx juice-shop
+docker run --rm -p 3000:3000 bkimminich/juice-shop
 ```
 
-### 3. Ejecuta la auditoría
+### 2. Abre la interfaz web
 
-```bash
-# Interfaz gráfica (recomendada)
-streamlit run app_gui.py
+Una vez que el contenedor de la herramienta esté corriendo, abre tu navegador y ve a:
 
-# O por línea de comandos
-python3 main.py
+```
+http://localhost:8501
 ```
 
-Verás en tiempo real cómo los módulos escanean, el agente analiza los hallazgos
-y profundiza, y al final se genera el reporte en la carpeta `resultados/`.
+### 3. Configura la auditoría desde la barra lateral
+
+En el panel izquierdo de la interfaz encontrarás:
+
+| Campo | Qué poner |
+|-------|-----------|
+| **URL objetivo** | La dirección del sitio a auditar. Si usas Docker, recuerda usar `http://host.docker.internal:3000` en lugar de `http://localhost:3000`, ya que `localhost` dentro del contenedor apunta a sí mismo. |
+| **Nombre del proyecto** | Un nombre descriptivo para identificar el reporte. |
+| **Módulos** | Activa o desactiva los escáneres que quieras ejecutar (cabeceras, cookies, nmap, ZAP, crawler, agente IA, etc.). |
+| **Agente de IA** | Si lo activas, configura el modelo (`jonathanFS/pentest-owasp`), el host de Ollama y las credenciales opcionales para auditar zonas autenticadas. |
+| **Monitor en vivo** | Marca "Mostrar navegador visualmente" para ver en tiempo real cómo el agente de IA interactúa con el sitio desde un escritorio virtual integrado. |
+| **Autorización** | Marca la casilla confirmando que tienes permiso para auditar el objetivo. |
+
+### 4. Inicia la auditoría
+
+Pulsa el botón **"Iniciar auditoría"**. Verás:
+
+1. Una **barra de progreso** con el módulo que se está ejecutando.
+2. Una **terminal de logs** con los mensajes en tiempo real.
+3. El **monitor en vivo** (desplegable) donde puedes observar al agente de IA navegando, haciendo clics e inyectando pruebas directamente en el sitio.
+
+### 5. Revisa los resultados
+
+Al finalizar, la interfaz mostrará:
+
+- **Resumen de riesgo global** con puntuación de 0 a 10.
+- **Tabla de hallazgos** clasificados por severidad y categoría OWASP.
+- **Botones de descarga** para el reporte en formato HTML y PDF.
+- **Video de la sesión** del agente de IA (si usó el navegador).
+
+Los reportes también quedan guardados en la carpeta `resultados/` del proyecto.
 
 > Para tu primera corrida, usa `limite_acciones` bajo (5–8): la sesión es más
 > corta y puedes revisar con calma en los logs qué hizo el agente.
