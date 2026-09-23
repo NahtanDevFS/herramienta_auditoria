@@ -46,15 +46,16 @@ ollama pull jonathanFS/pentest-owasp
 # 3) Construye la imagen de la herramienta (solo la primera vez)
 docker build -t auditoria_web .
 
-# 4) Levanta la interfaz gráfica
+# 4) Levanta la interfaz gráfica y el monitor en vivo
 # Usa host.docker.internal para que el contenedor pueda hablar con el Ollama de tu máquina
 docker run --rm -it \
   -p 8501:8501 \
+  -p 8080:8080 \
   -e OLLAMA_HOST=http://host.docker.internal:11434 \
   auditoria_web
 ```
 
-La interfaz gráfica estará disponible en **http://localhost:8501**.
+La interfaz gráfica estará disponible en **http://localhost:8501** y el monitor en vivo del navegador en **http://localhost:8080/vnc.html**.
 
 ### Opción B — Instalación Manual (sin Docker)
 

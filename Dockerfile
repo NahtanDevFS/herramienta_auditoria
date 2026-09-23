@@ -17,6 +17,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdk-pixbuf-2.0-0 \
     libffi-dev \
     shared-mime-info \
+    xvfb \
+    x11vnc \
+    novnc \
+    websockify \
+    fluxbox \
+    python3-tk \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Instalar Nuclei (Binario independiente)
@@ -45,8 +51,8 @@ RUN playwright install-deps
 # 7. Copiar el código fuente
 COPY . .
 
-# 8. Exponer el puerto de Streamlit
-EXPOSE 8501
+# 8. Exponer puertos (8501: Streamlit, 8080: noVNC)
+EXPOSE 8501 8080
 
-# 9. Comando por defecto: Lanzar la GUI
-CMD ["streamlit", "run", "app_gui.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# 9. Comando por defecto: Lanzar script de arranque múltiple
+CMD ["./start.sh"]

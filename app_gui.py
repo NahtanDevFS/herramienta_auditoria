@@ -114,14 +114,12 @@ with st.sidebar:
         )
         if usar_navegador:
             abrir_ventana = st.checkbox(
-                "Abrir ventana del navegador (verlo en vivo)", value=True,
-                help="Abre una ventana de Chrome visible mientras el agente actua. "
-                     "En WSL requiere WSLg (Windows 11). Si no hay pantalla, cae a modo oculto.",
+                "Mostrar navegador visualmente (Monitor en vivo noVNC)", value=True,
+                help="Arranca el navegador de forma visible en el escritorio virtual integrado de Docker.",
             )
         ventana_pensamiento = st.checkbox(
             "Ventana de pensamiento del agente", value=True,
-            help="Abre una ventana flotante que muestra en vivo el razonamiento del "
-                 "agente (que piensa, que decide, que confirma). En WSL requiere WSLg.",
+            help="Abre una ventana flotante con el razonamiento del agente en el monitor virtual.",
         )
         st.markdown("**Credenciales (opcional)** — para auditar la zona autenticada")
         cred_usuario = st.text_input("Usuario / email", value="",
@@ -188,6 +186,13 @@ if lanzar:
 
     barra = st.progress(0, text="Preparando auditoria...")
     estado = st.empty()
+
+    if config["agente_ia"].get("activo") and not config["agente_ia"].get("headless"):
+        st.markdown("**Monitor en Vivo (Escritorio Virtual Linux)**")
+        import streamlit.components.v1 as components
+        components.iframe(src="http://localhost:8080/vnc.html?autoconnect=true&resize=scale", width=1000, height=600)
+        st.caption("Si no ves la imagen, asegúrate de haber mapeado el puerto 8080 al lanzar Docker (-p 8080:8080).")
+
 
     # --- Panel de Logs en vivo ---
     st.markdown("**Terminal de progreso**")
