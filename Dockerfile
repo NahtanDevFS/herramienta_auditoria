@@ -36,7 +36,7 @@ WORKDIR /app
 
 # 5. Instalar dependencias de Python
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt playwright ollama python-dotenv
 
 # 6. Instalar Playwright (Navegador Chromium)
 RUN playwright install chromium
