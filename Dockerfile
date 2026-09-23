@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     default-jre \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
-    libgdk-pixbuf2.0-0 \
+    libgdk-pixbuf-2.0-0 \
     libffi-dev \
     shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
@@ -26,10 +26,10 @@ RUN wget https://github.com/projectdiscovery/nuclei/releases/download/v3.3.0/nuc
     && chmod +x /usr/local/bin/nuclei
 
 # 3. Instalar OWASP ZAP (Cross Platform)
-RUN wget https://github.com/zaproxy/zaproxy/releases/download/v2.15.0/ZAP_2.15.0_Crossplatform.zip -O zap.zip \
+RUN wget https://github.com/zaproxy/zaproxy/releases/download/v2.17.0/ZAP_2.17.0_Crossplatform.zip -O zap.zip \
     && unzip zap.zip -d /opt/ \
     && rm zap.zip \
-    && ln -s /opt/ZAP_2.15.0/zap.sh /usr/local/bin/zap.sh
+    && ln -s /opt/ZAP_2.17.0/zap.sh /usr/local/bin/zap.sh
 
 # 4. Configurar el directorio de trabajo
 WORKDIR /app
