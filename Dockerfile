@@ -54,6 +54,11 @@ COPY . .
 # 7.5 Arreglar formato Windows a Linux (CRLF a LF) y dar permisos
 RUN sed -i 's/\r$//' start.sh && chmod +x start.sh
 
+# 7.6 Configurar Fluxbox (sin decoraciones, sin barra, ventanas maximizadas)
+RUN mkdir -p /root/.fluxbox \
+    && cp fluxbox_apps /root/.fluxbox/apps \
+    && cp fluxbox_init /root/.fluxbox/init
+
 # 8. Exponer puertos (8501: Streamlit, 8080: noVNC)
 EXPOSE 8501 8080
 

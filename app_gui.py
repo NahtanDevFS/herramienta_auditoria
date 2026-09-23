@@ -230,7 +230,7 @@ if lanzar:
                 </iframe>
             </div>
             """
-            components.html(vnc_html, height=600)
+            components.html(vnc_html, height=700)
             st.caption("Puedes colapsar este panel con la flecha de arriba. "
                        "Si no ves imagen, verifica que mapeaste -p 8080:8080.")
 
