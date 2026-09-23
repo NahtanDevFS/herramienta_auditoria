@@ -33,24 +33,30 @@ pago ni claves en la nube.
 
 ### Opción A — Docker (recomendada)
 
-Docker levanta la app, Ollama y las herramientas en un solo paso.
+Ejecuta la herramienta con todas sus dependencias (Nmap, ZAP, SQLmap, Playwright, etc.) en un contenedor aislado, usando tu instalación local de Ollama.
 
 ```bash
 # 1) Clona el repositorio
 git clone https://github.com/NahtanDevFS/herramienta_auditoria.git
 cd herramienta_auditoria
 
-# 2) Crea tu configuración a partir del ejemplo
-cp config.yaml.example config.yaml
-#    Edita config.yaml: define tu objetivo y pon 'autorizacion_confirmada: true'
+# 2) Asegúrate de tener Ollama corriendo en tu máquina anfitriona y descarga el modelo
+ollama pull jonathanFS/pentest-owasp
 
-# 3) Levanta todo (la primera vez descarga el modelo automáticamente)
-docker compose up --build
+# 3) Construye la imagen de la herramienta (solo la primera vez)
+docker build -t auditoria_web .
+
+# 4) Levanta la interfaz gráfica
+# Usa host.docker.internal para que el contenedor pueda hablar con el Ollama de tu máquina
+docker run --rm -it \
+  -p 8501:8501 \
+  -e OLLAMA_HOST=http://host.docker.internal:11434 \
+  auditoria_web
 ```
 
-La interfaz queda en **http://localhost:8501**.
+La interfaz gráfica estará disponible en **http://localhost:8501**.
 
-### Opción B — Manual
+### Opción B — Instalación Manual (sin Docker)
 
 ```bash
 # 1) Clona el repositorio
@@ -64,16 +70,19 @@ ollama pull jonathanFS/pentest-owasp
 python3 -m venv venv
 source venv/bin/activate          # En Windows: venv\Scripts\activate
 pip install -r requirements.txt
-pip install ollama python-dotenv
 
-# 4) Instala las herramientas de sistema (Debian/Ubuntu)
-sudo apt install nmap sqlmap libpango-1.0-0 libpangoft2-1.0-0 libcairo2 \
+# 4) Instala las herramientas de navegador para Playwright
+playwright install chromium
+playwright install-deps
+
+# 5) Instala las herramientas de sistema (Debian/Ubuntu)
+sudo apt install nmap sqlmap default-jre \
+                 libpango-1.0-0 libpangoft2-1.0-0 libcairo2 \
                  libgdk-pixbuf-2.0-0 shared-mime-info
-#    nuclei: descárgalo de https://github.com/projectdiscovery/nuclei/releases
+#   Nota: ZAP y Nuclei deben instalarse manualmente en esta opción.
 
-# 5) Crea tu configuración
-cp config.yaml.example config.yaml
-#    Edita config.yaml con tu objetivo y autorizacion_confirmada: true
+# 6) Inicia la herramienta
+streamlit run app_gui.py
 ```
 
 ---

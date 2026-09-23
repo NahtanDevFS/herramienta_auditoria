@@ -88,8 +88,9 @@ with st.sidebar:
     st.subheader("Opciones avanzadas")
     verificar_ssl = st.checkbox("Verificar certificado SSL", value=True,
                                 help="Desactivar para certificados autofirmados.")
-    ruta_zap = st.text_input("Ruta a zap.sh (si usas ZAP)",
-                             value=os.path.expanduser("~/proyectos/ZAP_2.17.0/zap.sh"))
+    
+    default_zap = "/usr/local/bin/zap.sh" if os.path.exists("/usr/local/bin/zap.sh") else os.path.expanduser("~/proyectos/ZAP_2.17.0/zap.sh")
+    ruta_zap = st.text_input("Ruta a zap.sh (si usas ZAP)", value=default_zap)
 
     # --- Configuracion del agente de IA (modelo LOCAL via Ollama) ---
     modelo_ollama = "jonathanFS/pentest-owasp"
