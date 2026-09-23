@@ -21,8 +21,8 @@ FLUXBOX_PID=$!
 echo "[start.sh] Fluxbox iniciado (PID: $FLUXBOX_PID)"
 
 # 3. Iniciar x11vnc (Servidor VNC)
-# Se enlaza al display :0, sin password, optimizado para noVNC
-x11vnc -display :0 -nopw -listen localhost -xkb -ncache 10 -ncache_cr -forever -shared &
+# Se enlaza al display :0, sin password
+x11vnc -display :0 -nopw -listen localhost -xkb -forever -shared &
 VNC_PID=$!
 echo "[start.sh] x11vnc iniciado (PID: $VNC_PID)"
 
