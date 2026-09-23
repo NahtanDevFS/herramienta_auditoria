@@ -148,6 +148,12 @@ if not url:
     st.info("Introduce una URL objetivo en la barra lateral para comenzar.")
     st.stop()
 
+if modulos_activos.get("agente_ia") and usar_navegador and abrir_ventana:
+    st.markdown("**Monitor en Vivo (Escritorio Virtual Linux)**")
+    import streamlit.components.v1 as components
+    components.iframe(src="http://localhost:8080/vnc.html?autoconnect=true&resize=scale", width=1000, height=600)
+    st.caption("Si no ves la imagen, asegúrate de haber mapeado el puerto 8080 al lanzar Docker (-p 8080:8080).")
+
 if lanzar:
     if not (url.startswith("http://") or url.startswith("https://")):
         st.error("La URL debe empezar por http:// o https://")
@@ -186,13 +192,6 @@ if lanzar:
 
     barra = st.progress(0, text="Preparando auditoria...")
     estado = st.empty()
-
-    if config["agente_ia"].get("activo") and not config["agente_ia"].get("headless"):
-        st.markdown("**Monitor en Vivo (Escritorio Virtual Linux)**")
-        import streamlit.components.v1 as components
-        components.iframe(src="http://localhost:8080/vnc.html?autoconnect=true&resize=scale", width=1000, height=600)
-        st.caption("Si no ves la imagen, asegúrate de haber mapeado el puerto 8080 al lanzar Docker (-p 8080:8080).")
-
 
     # --- Panel de Logs en vivo ---
     st.markdown("**Terminal de progreso**")

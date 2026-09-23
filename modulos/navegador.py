@@ -32,7 +32,10 @@ class NavegadorAgente:
 
         self._pw = sync_playwright().start()
         try:
-            self._browser = self._pw.chromium.launch(headless=headless)
+            self._browser = self._pw.chromium.launch(
+                headless=headless,
+                args=["--window-size=1280,1080", "--window-position=0,0"]
+            )
         except Exception as e:
             # headless=False falla si no hay pantalla (sin WSLg / sin DISPLAY).
             # En vez de romper, caemos a modo oculto y seguimos (las capturas y

@@ -16,7 +16,7 @@ def _main_ventana(archivo):
 
     root = tk.Tk()
     root.title("Razonamiento del agente")
-    root.geometry("660x780")
+    root.geometry("640x1080+1280+0")
     root.configure(bg="#0d1117")
 
     tk.Label(root, text="Razonamiento del agente en vivo", bg="#0d1117",

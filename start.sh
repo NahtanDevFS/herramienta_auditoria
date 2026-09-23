@@ -6,9 +6,9 @@
 # =============================================================================
 
 # 1. Iniciar Xvfb (Virtual Framebuffer)
-# Crea un display virtual en el puerto :0 con resolucion 1280x720
+# Crea un display virtual en el puerto :0 con resolucion 1920x1080
 export DISPLAY=:0
-Xvfb :0 -screen 0 1280x720x24 -listen tcp -ac &
+Xvfb :0 -screen 0 1920x1080x24 -listen tcp -ac &
 XVFB_PID=$!
 echo "[start.sh] Xvfb iniciado (PID: $XVFB_PID)"
 
