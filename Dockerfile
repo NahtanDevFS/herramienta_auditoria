@@ -51,6 +51,9 @@ RUN playwright install-deps
 # 7. Copiar el código fuente
 COPY . .
 
+# 7.5 Arreglar formato Windows a Linux (CRLF a LF) y dar permisos
+RUN sed -i 's/\r$//' start.sh && chmod +x start.sh
+
 # 8. Exponer puertos (8501: Streamlit, 8080: noVNC)
 EXPOSE 8501 8080
 
