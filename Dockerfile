@@ -1,5 +1,5 @@
 # Usa una imagen oficial de Python ligera
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Evita que apt-get haga preguntas interactivas
 ENV DEBIAN_FRONTEND=noninteractive
