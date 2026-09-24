@@ -22,13 +22,13 @@ echo "[start.sh] Fluxbox iniciado (PID: $FLUXBOX_PID)"
 
 # 3. Iniciar x11vnc (Servidor VNC)
 # Se enlaza al display :0, sin password
-x11vnc -display :0 -nopw -listen localhost -xkb -forever -shared &
+x11vnc -display :0 -nopw -listen localhost -xkb -forever -shared -q > /dev/null 2>&1 &
 VNC_PID=$!
 echo "[start.sh] x11vnc iniciado (PID: $VNC_PID)"
 
 # 4. Iniciar websockify (Puente WebSockets para noVNC)
 # noVNC suele estar instalado en /usr/share/novnc en Debian/Ubuntu
-websockify --web=/usr/share/novnc/ --wrap-mode=ignore 8080 localhost:5900 &
+websockify --web=/usr/share/novnc/ --wrap-mode=ignore 8080 localhost:5900 > /dev/null 2>&1 &
 WEBSOCKIFY_PID=$!
 echo "[start.sh] websockify iniciado en puerto 8080 (PID: $WEBSOCKIFY_PID)"
 
