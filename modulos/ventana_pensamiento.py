@@ -16,9 +16,15 @@ def _main_ventana(archivo):
 
     root = tk.Tk()
     root.title("Razonamiento del agente")
+    # Quitamos la decoracion (barra de titulo/bordes) directamente desde Tk en vez
+    # de depender de la regla de fluxbox (~/.fluxbox/apps), que no matchea de forma
+    # fiable la clase de la ventana Tk. Asi la ventana ocupa exactamente su
+    # geometria y no se sale de la pantalla.
+    root.overrideredirect(True)
     # Se deja un margen respecto al borde derecho de la pantalla (1920px) para que
     # la barra de scroll y el texto no queden recortados fuera del area visible.
     root.geometry("624x1060+1288+10")
+    root.update_idletasks()
     root.configure(bg="#0d1117")
 
     tk.Label(root, text="Razonamiento del agente en vivo", bg="#0d1117",

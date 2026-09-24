@@ -54,6 +54,162 @@ def configurar_logger():
     return logger
 
 
+# =============================================================================
+# Ejecucion de la auditoria en un PROCESO aparte (cancelable con "Detener").
+# La auditoria hace llamadas bloqueantes (Ollama, Playwright) que Streamlit no
+# puede interrumpir; por eso corre en su propio proceso, que podemos matar por
+# completo (incluyendo Chromium y la ventana de razonamiento) al pulsar Detener.
+# =============================================================================
+def _worker_auditoria(config, ruta_log, ruta_estado, cola):
+    # Corre en el proceso hijo. Escribe log y progreso en archivos que la UI lee,
+    # y deja el resultado final en la cola.
+    os.setsid()  # nuevo grupo de procesos -> permite matar todo el arbol al detener
+    logger = logging.getLogger("auditoria_worker")
+    logger.setLevel(logging.INFO)
+    logger.handlers.clear()
+    fh = logging.FileHandler(ruta_log, mode="w", encoding="utf-8")
+    fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s",
+                                       datefmt="%H:%M:%S"))
+    logger.addHandler(fh)
+
+    def cb(indice, total, nombre_modulo):
+        try:
+            with open(ruta_estado, "w", encoding="utf-8") as f:
+                json.dump({"indice": indice, "total": total,
+                           "modulo": nombre_modulo}, f)
+        except Exception:
+            pass
+
+    try:
+        reporte = ejecutar_auditoria(config, logger, callback_progreso=cb)
+        datos = reporte.construir()
+        carpeta = config.get("salida", {}).get("carpeta", "resultados")
+        reporte.guardar_json(carpeta)
+        rutas = generar_informe(datos, carpeta, ["html", "pdf"], logger)
+        videos = sorted(glob.glob(os.path.join(carpeta, "video", "*.webm")),
+                        key=os.path.getmtime, reverse=True)
+        cola.put({"ok": True, "datos": datos, "rutas": rutas,
+                  "video": videos[0] if videos else None})
+    except Exception as e:
+        logger.error(f"Error en la auditoria: {e}")
+        try:
+            cola.put({"ok": False, "error": str(e)})
+        except Exception:
+            pass
+
+
+def _lanzar_auditoria_en_proceso(config, mostrar_monitor):
+    import multiprocessing
+    import tempfile
+    ctx = multiprocessing.get_context("fork")  # fork: el hijo NO reimporta app_gui
+    base = tempfile.gettempdir()
+    ruta_log = os.path.join(base, "auditoria_live.log")
+    ruta_estado = os.path.join(base, "auditoria_estado.json")
+    for p in (ruta_log, ruta_estado):
+        try:
+            os.remove(p)
+        except OSError:
+            pass
+    cola = ctx.Queue()
+    proc = ctx.Process(target=_worker_auditoria,
+                       args=(config, ruta_log, ruta_estado, cola))
+    proc.start()
+    st.session_state.proc = proc
+    st.session_state.cola = cola
+    st.session_state.ruta_log = ruta_log
+    st.session_state.ruta_estado = ruta_estado
+    st.session_state.mostrar_monitor = mostrar_monitor
+
+
+def _limpiar_estado_auditoria():
+    st.session_state.auditoria_en_curso = False
+    for k in ("proc", "cola", "ruta_log", "ruta_estado"):
+        st.session_state.pop(k, None)
+
+
+def _detener_auditoria():
+    import signal
+    proc = st.session_state.get("proc")
+    if proc is not None and proc.pid:
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            if not proc.is_alive():
+                break
+            try:
+                # Mata al grupo completo (worker + Chromium + ventana de razonamiento).
+                os.killpg(os.getpgid(proc.pid), sig)
+            except OSError:
+                try:
+                    proc.terminate() if sig == signal.SIGTERM else proc.kill()
+                except Exception:
+                    pass
+            proc.join(timeout=5)
+    _limpiar_estado_auditoria()
+    st.session_state["error_auditoria"] = "Auditoria detenida por el usuario."
+
+
+@st.fragment(run_every="1s")
+def _panel_en_curso():
+    # Se auto-refresca cada segundo SIN recargar el resto de la pagina (por eso el
+    # iframe del monitor en vivo, que va fuera del fragmento, no parpadea).
+    proc = st.session_state.get("proc")
+    cola = st.session_state.get("cola")
+    ruta_log = st.session_state.get("ruta_log")
+    ruta_estado = st.session_state.get("ruta_estado")
+
+    if st.button("Detener auditoria", type="secondary"):
+        _detener_auditoria()
+        st.rerun()  # rerun de app completo -> sale del modo "en curso"
+
+    # Barra de progreso (desde el archivo de estado).
+    indice, total, modulo = 0, 0, "preparando"
+    try:
+        with open(ruta_estado, encoding="utf-8") as f:
+            e = json.load(f)
+        indice, total, modulo = e.get("indice", 0), e.get("total", 0), e.get("modulo", "")
+    except Exception:
+        pass
+    pct = int(indice / max(total, 1) * 100)
+    st.progress(pct, text=f"Ejecutando: {modulo} ({indice}/{max(total, 1)})")
+
+    # Terminal de progreso en vivo (ultimas lineas del log).
+    st.markdown("**Terminal de progreso**")
+    try:
+        with open(ruta_log, encoding="utf-8") as f:
+            lineas = f.readlines()[-14:]
+        st.code("".join(lineas).strip() or "Iniciando...", language="text")
+    except Exception:
+        st.code("Iniciando...", language="text")
+
+    # Resultado disponible en la cola?
+    resultado = None
+    if cola is not None:
+        try:
+            resultado = cola.get_nowait()
+        except Exception:
+            resultado = None
+
+    # Si el proceso ya murio y aun no hay resultado, dar un instante por si llega.
+    if resultado is None and proc is not None and not proc.is_alive():
+        try:
+            resultado = cola.get(timeout=1)
+        except Exception:
+            resultado = None
+        if resultado is None:
+            _limpiar_estado_auditoria()  # murio sin dejar resultado
+            st.rerun()
+            return
+
+    if resultado is not None:
+        if resultado.get("ok"):
+            st.session_state["datos_reporte"] = resultado["datos"]
+            st.session_state["rutas_informe"] = resultado["rutas"]
+            st.session_state["video_agente"] = resultado.get("video")
+        else:
+            st.session_state["error_auditoria"] = resultado.get("error", "desconocido")
+        _limpiar_estado_auditoria()
+        st.rerun()
+
+
 st.title("Herramienta de Auditoria de Seguridad Web")
 st.caption("Analisis segun OWASP Top 10")
 
@@ -158,12 +314,10 @@ if lanzar:
     if not autorizado:
         st.error("Debes confirmar la autorizacion para auditar.")
         st.stop()
-    
-    st.session_state.auditoria_en_curso = True
-    st.rerun()
 
-if st.session_state.get("auditoria_en_curso", False):
-    config = {
+    # Se arma la config y se guarda; el proceso de auditoria se lanza en la
+    # siguiente pasada (bloque "en curso"), en un proceso aparte cancelable.
+    st.session_state.config_auditoria = {
         "objetivo": {"url": url, "nombre": nombre, "autorizacion_confirmada": True},
         "modulos": modulos_activos,
         "opciones": {"timeout": 10, "verificar_ssl": verificar_ssl,
@@ -188,45 +342,26 @@ if st.session_state.get("auditoria_en_curso", False):
             "timeout_sesion_seg": timeout_agente,
         },
     }
+    st.session_state.mostrar_monitor = bool(
+        modulos_activos.get("agente_ia") and usar_navegador and abrir_ventana)
+    st.session_state.auditoria_en_curso = True
+    st.session_state.pop("error_auditoria", None)
+    st.rerun()
 
-    logger = configurar_logger()
+if st.session_state.get("auditoria_en_curso", False):
+    # Primera pasada: lanzar el proceso de auditoria en segundo plano.
+    if st.session_state.get("proc") is None:
+        _lanzar_auditoria_en_proceso(
+            st.session_state.get("config_auditoria", {}),
+            st.session_state.get("mostrar_monitor", False))
 
-    barra = st.progress(0, text="Preparando auditoria...")
-    estado = st.empty()
+    st.subheader("Auditoria en curso")
 
-    # --- Panel de Logs en vivo ---
-    st.markdown("**Terminal de progreso**")
-    log_box = st.empty()
-    
-    class StreamlitLogHandler(logging.Handler):
-        def __init__(self, placeholder):
-            super().__init__()
-            self.placeholder = placeholder
-            self.logs = []
-        def emit(self, record):
-            msg = self.format(record)
-            self.logs.append(msg)
-            # Mantener solo unas pocas lineas para que quede de un tamano fijo y no empuje la UI
-            if len(self.logs) > 4:
-                self.logs.pop(0)
-            self.placeholder.code("\n".join(self.logs), language="text")
-            
-    st_handler = StreamlitLogHandler(log_box)
-    st_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S"))
-    logger.addHandler(st_handler)
-
-    def callback(indice, total, nombre_modulo):
-        pct = int(indice / max(total, 1) * 100)
-        barra.progress(pct, text=f"Ejecutando: {nombre_modulo} ({indice}/{total})")
-        estado.info(f"En curso: **{nombre_modulo}**")
-
-
-    # --- Monitor en Vivo (desplegable, debajo de la terminal) ---
-    if config["agente_ia"].get("activo") and not config["agente_ia"].get("headless"):
+    # Monitor en Vivo: va FUERA del fragmento auto-refrescante para que el iframe
+    # de noVNC no se recargue en cada actualizacion del progreso.
+    if st.session_state.get("mostrar_monitor"):
         import streamlit.components.v1 as components
         with st.expander("Monitor en Vivo (Escritorio Virtual)", expanded=True):
-            # HTML responsivo: el iframe ocupa el 100% del ancho disponible
-            # con una relacion de aspecto 16:9 para mantener la proporcion.
             vnc_html = """
             <div style="position:relative;width:100%;padding-bottom:56.25%;overflow:hidden;">
                 <iframe
@@ -240,30 +375,12 @@ if st.session_state.get("auditoria_en_curso", False):
             st.caption("Puedes colapsar este panel con la flecha de arriba. "
                        "Si no ves imagen, verifica que mapeaste -p 8080:8080.")
 
-    with st.spinner("Auditoria en curso... esto puede tardar varios minutos."):
-        try:
-            reporte = ejecutar_auditoria(config, logger, callback_progreso=callback)
+    _panel_en_curso()
 
-            barra.progress(100, text="Auditoria completada.")
-            estado.success("Auditoria completada.")
 
-            datos = reporte.construir()
-            st.session_state["datos_reporte"] = datos
-
-            carpeta = "resultados"
-            reporte.guardar_json(carpeta)
-            rutas = generar_informe(datos, carpeta, ["html", "pdf"], logger)
-            st.session_state["rutas_informe"] = rutas
-
-            # Guardar la ruta del ultimo video (si el agente uso el navegador).
-            videos = sorted(glob.glob(os.path.join(carpeta, "video", "*.webm")),
-                            key=os.path.getmtime, reverse=True)
-            st.session_state["video_agente"] = videos[0] if videos else None
-
-        finally:
-            st.session_state.auditoria_en_curso = False
-            st.rerun()
-
+# --- Aviso si la ultima auditoria fue detenida o fallo ---
+if st.session_state.get("error_auditoria") and not st.session_state.get("auditoria_en_curso"):
+    st.warning(st.session_state["error_auditoria"])
 
 # --- Mostrar resultados (si existen) ---
 if "datos_reporte" in st.session_state:
