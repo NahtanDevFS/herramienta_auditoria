@@ -16,14 +16,19 @@ def _main_ventana(archivo):
 
     root = tk.Tk()
     root.title("Razonamiento del agente")
-    root.geometry("640x1080+1280+0")
+    # Se deja un margen respecto al borde derecho de la pantalla (1920px) para que
+    # la barra de scroll y el texto no queden recortados fuera del area visible.
+    root.geometry("624x1060+1288+10")
     root.configure(bg="#0d1117")
 
     tk.Label(root, text="Razonamiento del agente en vivo", bg="#0d1117",
              fg="#58a6ff", font=("Segoe UI", 15, "bold")).pack(pady=10)
 
+    # wrap=CHAR asegura que URLs y payloads largos sin espacios (p.ej.
+    # http://host.docker.internal:5173/admin) tambien se ajusten al ancho y no
+    # se desborden horizontalmente.
     txt = scrolledtext.ScrolledText(root, bg="#0d1117", fg="#c9d1d9",
-                                    font=("Consolas", 12), wrap=tk.WORD,
+                                    font=("Consolas", 12), wrap=tk.CHAR,
                                     borderwidth=0, padx=10, pady=10)
     txt.pack(expand=True, fill="both", padx=12, pady=(0, 12))
     txt.tag_config("pensando", foreground="#d29922")

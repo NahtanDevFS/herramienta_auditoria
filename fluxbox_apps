@@ -5,7 +5,7 @@
 [end]
 
 [app] (name=tk) (class=Tk)
-  [Deco] {BORDER HANDLE}
-  [Dimensions] {640 1080}
-  [Position] (UPPERLEFT) {1280 0}
+  [Deco] {NONE}
+  [Dimensions] {624 1060}
+  [Position] (UPPERLEFT) {1288 10}
 [end]
