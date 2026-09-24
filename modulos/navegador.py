@@ -264,11 +264,17 @@ class NavegadorAgente:
             else:
                 campo_pass.press("Enter")
             time.sleep(1.8)
+            try:
+                self._page.wait_for_load_state("networkidle", timeout=3000)
+            except Exception:
+                pass
             self._captura("login real: resultado")
+            url_actual = self._page.url
             tiene_token = self._page.evaluate(
                 "() => !!(localStorage.getItem('token') || sessionStorage.getItem('token'))")
-            return {"ok": bool(tiene_token), "autenticado": bool(tiene_token),
-                    "url_actual": self._page.url}
+            exito = (url_actual != url_login) or bool(tiene_token)
+            return {"ok": bool(exito), "autenticado": bool(exito),
+                    "url_actual": url_actual}
         except Exception as e:
             return {"ok": False, "error": f"Error en el login: {e}"}
 
@@ -309,11 +315,15 @@ class NavegadorAgente:
             if not enviado:
                 campo_pass.press("Enter")
             time.sleep(1.6)
+            try:
+                self._page.wait_for_load_state("networkidle", timeout=3000)
+            except Exception:
+                pass
             self._captura("login: resultado")
             url_actual = self._page.url
             tiene_token = self._page.evaluate(
                 "() => !!(localStorage.getItem('token') || sessionStorage.getItem('token'))")
-            exito = ("login" not in url_actual.lower()) or bool(tiene_token)
+            exito = (url_actual != url_login) or bool(tiene_token)
             return {"ok": True, "url_actual": url_actual, "url_login": url_login,
                     "posible_exito": exito,
                     "token_presente": bool(tiene_token),
