@@ -40,20 +40,30 @@ Ejecuta la herramienta con todas sus dependencias (Nmap, ZAP, SQLmap, Playwright
 git clone https://github.com/NahtanDevFS/herramienta_auditoria.git
 cd herramienta_auditoria
 
-# 2) Asegúrate de tener Ollama corriendo en tu máquina anfitriona y descarga el modelo
+# 2) Ollama en tu máquina, escuchando en TODAS las interfaces (para que el
+#    contenedor pueda alcanzarlo), y descarga el modelo:
+#    - Windows (una sola vez, luego reabre Ollama):  setx OLLAMA_HOST "0.0.0.0"
+#    - Mac / Linux:                                   OLLAMA_HOST=0.0.0.0 ollama serve
 ollama pull jonathanFS/pentest-owasp
 
 # 3) Construye la imagen de la herramienta (solo la primera vez)
 docker build -t auditoria_web .
 
-# 4) Levanta la interfaz gráfica y el monitor en vivo
-# Usa host.docker.internal para que el contenedor pueda hablar con el Ollama de tu máquina
+# 4) Levanta la interfaz gráfica y el monitor en vivo.
+#    --add-host hace que host.docker.internal también funcione en Linux (en Docker
+#    Desktop de Windows/Mac ya funciona solo, y el flag no estorba).
 docker run --rm -it \
   -p 8501:8501 \
   -p 8080:8080 \
+  --add-host=host.docker.internal:host-gateway \
   -e OLLAMA_HOST=http://host.docker.internal:11434 \
   auditoria_web
 ```
+
+> **Único requisito de red:** Ollama debe escuchar en `0.0.0.0` (paso 2). Por
+> defecto solo escucha en `127.0.0.1` y el contenedor no lo alcanza. Es un ajuste
+> de una sola vez. El resto (frontend, backend, base de datos que auditas) se
+> queda tal cual: la herramienta nunca toca tu base de datos directamente.
 
 La interfaz gráfica estará disponible en **http://localhost:8501** y el monitor en vivo del navegador en **http://localhost:8080/vnc.html**.
 

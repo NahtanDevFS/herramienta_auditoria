@@ -156,9 +156,7 @@ def _panel_en_curso():
     ruta_log = st.session_state.get("ruta_log")
     ruta_estado = st.session_state.get("ruta_estado")
 
-    if st.button("Detener auditoria", type="secondary"):
-        _detener_auditoria()
-        st.rerun()  # rerun de app completo -> sale del modo "en curso"
+    # (El boton de Detener vive en el sidebar, para que sea siempre visible.)
 
     # Barra de progreso (desde el archivo de estado).
     indice, total, modulo = 0, 0, "preparando"
@@ -299,8 +297,23 @@ with st.sidebar:
         st.session_state.auditoria_en_curso = False
 
     lanzar = st.button("Iniciar auditoria", type="primary",
-                       use_container_width=True, 
+                       use_container_width=True,
                        disabled=(not autorizado or st.session_state.auditoria_en_curso))
+
+    # Boton de DETENER: solo visible mientras hay una auditoria en curso, en rojo.
+    if st.session_state.get("auditoria_en_curso"):
+        st.markdown(
+            "<style>"
+            ".st-key-btn_detener button{background:#D32F2F !important;"
+            "color:#fff !important;border:none !important;font-weight:700 !important;}"
+            ".st-key-btn_detener button:hover{background:#B71C1C !important;"
+            "color:#fff !important;}"
+            "</style>",
+            unsafe_allow_html=True)
+        if st.button("⏹ Detener auditoria", key="btn_detener",
+                     use_container_width=True):
+            _detener_auditoria()
+            st.rerun()
 
 # --- Zona principal ---
 if not url:
@@ -344,8 +357,11 @@ if lanzar:
     }
     st.session_state.mostrar_monitor = bool(
         modulos_activos.get("agente_ia") and usar_navegador and abrir_ventana)
+    # Limpiar resultados/errores de la auditoria anterior para que no queden
+    # visibles al arrancar una nueva.
+    for k in ("datos_reporte", "rutas_informe", "video_agente", "error_auditoria"):
+        st.session_state.pop(k, None)
     st.session_state.auditoria_en_curso = True
-    st.session_state.pop("error_auditoria", None)
     st.rerun()
 
 if st.session_state.get("auditoria_en_curso", False):
@@ -355,10 +371,11 @@ if st.session_state.get("auditoria_en_curso", False):
             st.session_state.get("config_auditoria", {}),
             st.session_state.get("mostrar_monitor", False))
 
-    st.subheader("Auditoria en curso")
+    # Panel de progreso + terminal en vivo (arriba).
+    _panel_en_curso()
 
-    # Monitor en Vivo: va FUERA del fragmento auto-refrescante para que el iframe
-    # de noVNC no se recargue en cada actualizacion del progreso.
+    # Monitor en Vivo (debajo, como estaba). Va FUERA del fragmento auto-refrescante
+    # para que el iframe de noVNC no se recargue en cada actualizacion del progreso.
     if st.session_state.get("mostrar_monitor"):
         import streamlit.components.v1 as components
         with st.expander("Monitor en Vivo (Escritorio Virtual)", expanded=True):
@@ -375,15 +392,13 @@ if st.session_state.get("auditoria_en_curso", False):
             st.caption("Puedes colapsar este panel con la flecha de arriba. "
                        "Si no ves imagen, verifica que mapeaste -p 8080:8080.")
 
-    _panel_en_curso()
-
 
 # --- Aviso si la ultima auditoria fue detenida o fallo ---
 if st.session_state.get("error_auditoria") and not st.session_state.get("auditoria_en_curso"):
     st.warning(st.session_state["error_auditoria"])
 
-# --- Mostrar resultados (si existen) ---
-if "datos_reporte" in st.session_state:
+# --- Mostrar resultados (si existen y no hay una auditoria en curso) ---
+if "datos_reporte" in st.session_state and not st.session_state.get("auditoria_en_curso"):
     datos = st.session_state["datos_reporte"]
     meta = datos["metadatos"]
     analisis = datos.get("analisis_riesgo", {})

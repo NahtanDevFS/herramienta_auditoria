@@ -231,6 +231,50 @@ class NavegadorAgente:
         except Exception as e:
             return {"error": f"No se pudo analizar la pagina: {e}"}
 
+    def _estado_sesion(self, url_antes):
+        # Heuristica ROBUSTA para saber si hay sesion iniciada (valida para SPAs).
+        # No depende de una clave de token concreta ni de que cambie la URL: mira
+        # varias senales (token en storage, desaparicion del formulario de login,
+        # indicios de "cerrar sesion", cambio de vista).
+        try:
+            info = self._page.evaluate(
+                """
+                () => {
+                  const dump = (s) => { const o={}; try { for (let i=0;i<s.length;i++){ const k=s.key(i); o[k]=s.getItem(k);} } catch(e){} return o; };
+                  const all = {...dump(localStorage), ...dump(sessionStorage)};
+                  const jwt = /^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/;
+                  let tokenLike = false;
+                  for (const k in all) {
+                    const v = (all[k]||'') + '';
+                    const kn = k.toLowerCase();
+                    if ((kn.includes('token')||kn.includes('jwt')||kn.includes('auth')||kn.includes('session')||kn.includes('user')) && v.length>20) tokenLike = true;
+                    if (jwt.test(v)) tokenLike = true;
+                  }
+                  const hayPassword = !!document.querySelector('input[type=password]');
+                  const txt = (document.body ? document.body.innerText : '').toLowerCase();
+                  const hayLogout = /cerrar sesi|cerrar sesión|logout|log out|sign out|salir/.test(txt);
+                  const hayErrorLogin = /credenciales inv|usuario o contrase|contraseña incorrect|incorrect password|invalid credential|login fail|no autorizado|unauthorized/.test(txt);
+                  return {tokenLike, hayPassword, hayLogout, hayErrorLogin, claves: Object.keys(all)};
+                }
+                """
+            )
+        except Exception:
+            info = {}
+        url_actual = self._page.url
+        url_cambio = url_actual != url_antes
+        token_like = bool(info.get("tokenLike"))
+        hay_password = bool(info.get("hayPassword"))
+        hay_logout = bool(info.get("hayLogout"))
+        hay_error = bool(info.get("hayErrorLogin"))
+        # Autenticado si hay senal positiva y NO hay mensaje de error de login.
+        autenticado = (not hay_error) and (
+            token_like or hay_logout or (not hay_password)
+            or (url_cambio and "login" not in url_actual.lower()))
+        return {"autenticado": autenticado, "url_actual": url_actual,
+                "token_like": token_like, "hay_password": hay_password,
+                "hay_logout": hay_logout, "hay_error_login": hay_error,
+                "url_cambio": url_cambio, "claves_storage": info.get("claves", [])}
+
     def iniciar_sesion(self, url_login, usuario, contrasena):
         # Inicia sesion REAL con credenciales validas.
         try:
@@ -246,8 +290,10 @@ class NavegadorAgente:
             "input[type=password]", "input[name*=pass i]", "input[id*=pass i]",
         ])
         if not campo_user or not campo_pass:
-            return {"ok": False, "error": "No se encontro el formulario de login."}
+            return {"ok": False, "autenticado": False,
+                    "error": "No se encontro el formulario de login."}
         try:
+            url_antes = self._page.url
             campo_user.fill(usuario)
             campo_pass.fill(contrasena)
             self._captura("login real: credenciales ingresadas")
@@ -265,18 +311,19 @@ class NavegadorAgente:
                 campo_pass.press("Enter")
             time.sleep(1.8)
             try:
-                self._page.wait_for_load_state("networkidle", timeout=3000)
+                self._page.wait_for_load_state("networkidle", timeout=4000)
             except Exception:
                 pass
             self._captura("login real: resultado")
-            url_actual = self._page.url
-            tiene_token = self._page.evaluate(
-                "() => !!(localStorage.getItem('token') || sessionStorage.getItem('token'))")
-            exito = (url_actual != url_login) or bool(tiene_token)
-            return {"ok": bool(exito), "autenticado": bool(exito),
-                    "url_actual": url_actual}
+            estado = self._estado_sesion(url_antes)
+            self._log(f"login real -> autenticado={estado['autenticado']} "
+                      f"(token={estado['token_like']}, sin_password="
+                      f"{not estado['hay_password']}, logout={estado['hay_logout']}, "
+                      f"error={estado['hay_error_login']}, url_cambio={estado['url_cambio']})")
+            return {"ok": estado["autenticado"], **estado}
         except Exception as e:
-            return {"ok": False, "error": f"Error en el login: {e}"}
+            return {"ok": False, "autenticado": False,
+                    "error": f"Error en el login: {e}"}
 
     def probar_login(self, usuario, contrasena):
         self._descartar_overlays()
