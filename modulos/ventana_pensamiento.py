@@ -21,9 +21,17 @@ def _main_ventana(archivo):
     # fiable la clase de la ventana Tk. Asi la ventana ocupa exactamente su
     # geometria y no se sale de la pantalla.
     root.overrideredirect(True)
-    # Se deja un margen respecto al borde derecho de la pantalla (1920px) para que
-    # la barra de scroll y el texto no queden recortados fuera del area visible.
-    root.geometry("624x1060+1288+10")
+    # Posicion calculada desde el ancho REAL de la pantalla (no valores fijos), para
+    # que la ventana quede pegada a la derecha pero SIEMPRE dentro del area visible,
+    # con margen, sin desbordarse (aunque cambie la resolucion del escritorio).
+    root.update_idletasks()
+    sw = root.winfo_screenwidth()
+    sh = root.winfo_screenheight()
+    margen = 20
+    ancho = 600
+    alto = max(sh - 2 * margen, 400)
+    x = max(sw - ancho - margen, 0)   # pegada a la derecha, con margen
+    root.geometry(f"{ancho}x{alto}+{x}+{margen}")
     root.update_idletasks()
     root.configure(bg="#0d1117")
 
@@ -36,7 +44,7 @@ def _main_ventana(archivo):
     txt = scrolledtext.ScrolledText(root, bg="#0d1117", fg="#c9d1d9",
                                     font=("Consolas", 12), wrap=tk.CHAR,
                                     borderwidth=0, padx=10, pady=10)
-    txt.pack(expand=True, fill="both", padx=12, pady=(0, 12))
+    txt.pack(expand=True, fill="both", padx=(12, 16), pady=(0, 12))
     txt.tag_config("pensando", foreground="#d29922")
     txt.tag_config("accion", foreground="#58a6ff")
     txt.tag_config("resultado", foreground="#3fb950")

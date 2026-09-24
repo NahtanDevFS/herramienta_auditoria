@@ -6,6 +6,6 @@
 
 [app] (name=tk) (class=Tk)
   [Deco] {NONE}
-  [Dimensions] {624 1060}
-  [Position] (UPPERLEFT) {1288 10}
+  [Dimensions] {600 1040}
+  [Position] (UPPERLEFT) {1300 20}
 [end]
