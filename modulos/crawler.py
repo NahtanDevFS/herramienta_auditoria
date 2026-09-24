@@ -215,7 +215,10 @@ def _construir_hallazgos(objetivo, rutas, formularios, urls_param, logger):
         if len(paths) > 40:
             resumen += f" ... (+{len(paths) - 40} mas)"
         hallazgos.append(Hallazgo(
-            titulo=f"Mapa del sitio: {len(rutas)} ruta(s) descubierta(s)",
+            # El conteo debe coincidir con las rutas realmente listadas (paths
+            # unicos), no con el total de URLs crudas (que incluye duplicados por
+            # query/fragment). Antes decia N pero listaba menos.
+            titulo=f"Mapa del sitio: {len(paths)} ruta(s) descubierta(s)",
             categoria="A05", severidad="informativa", cvss=None,
             descripcion="Inventario de rutas descubiertas durante el rastreo (con "
                         "renderizado de JavaScript). Parte del reconocimiento.",

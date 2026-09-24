@@ -147,6 +147,25 @@ def _detener_auditoria():
     st.session_state["error_auditoria"] = "Auditoria detenida por el usuario."
 
 
+def _render_monitor(expanded=True):
+    # Panel plegable del Monitor en Vivo (noVNC). Se muestra durante la auditoria
+    # y TAMBIEN despues (el usuario decide si plegarlo), no desaparece al terminar.
+    import streamlit.components.v1 as components
+    with st.expander("Monitor en Vivo (Escritorio Virtual)", expanded=expanded):
+        vnc_html = """
+        <div style="position:relative;width:100%;padding-bottom:56.25%;overflow:hidden;">
+            <iframe
+                src="http://localhost:8080/vnc.html?autoconnect=true&resize=scale"
+                style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;"
+                allowfullscreen>
+            </iframe>
+        </div>
+        """
+        components.html(vnc_html, height=700)
+        st.caption("Puedes plegar o desplegar este panel con la flecha de arriba. "
+                   "Si no ves imagen, verifica que mapeaste -p 8080:8080.")
+
+
 @st.fragment(run_every="1s")
 def _panel_en_curso():
     # Se auto-refresca cada segundo SIN recargar el resto de la pagina (por eso el
@@ -377,20 +396,12 @@ if st.session_state.get("auditoria_en_curso", False):
     # Monitor en Vivo (debajo, como estaba). Va FUERA del fragmento auto-refrescante
     # para que el iframe de noVNC no se recargue en cada actualizacion del progreso.
     if st.session_state.get("mostrar_monitor"):
-        import streamlit.components.v1 as components
-        with st.expander("Monitor en Vivo (Escritorio Virtual)", expanded=True):
-            vnc_html = """
-            <div style="position:relative;width:100%;padding-bottom:56.25%;overflow:hidden;">
-                <iframe
-                    src="http://localhost:8080/vnc.html?autoconnect=true&resize=scale"
-                    style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;"
-                    allowfullscreen>
-                </iframe>
-            </div>
-            """
-            components.html(vnc_html, height=700)
-            st.caption("Puedes colapsar este panel con la flecha de arriba. "
-                       "Si no ves imagen, verifica que mapeaste -p 8080:8080.")
+        _render_monitor(expanded=True)
+
+# Tras terminar la auditoria, mantener el Monitor en Vivo disponible (plegable):
+# no debe desaparecer al finalizar; el usuario decide si ocultarlo.
+elif st.session_state.get("mostrar_monitor"):
+    _render_monitor(expanded=True)
 
 
 # --- Aviso si la ultima auditoria fue detenida o fallo ---
