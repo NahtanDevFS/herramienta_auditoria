@@ -139,15 +139,17 @@ with st.sidebar:
     autorizado = st.checkbox(
         "Confirmo que tengo AUTORIZACION para auditar este objetivo", value=False)
 
-    lanzar = st.button("Iniciar auditoria", type="primary",
-                       width='stretch', disabled=not autorizado)
+    if "auditoria_en_curso" not in st.session_state:
+        st.session_state.auditoria_en_curso = False
 
+    lanzar = st.button("🚀 Iniciar auditoria", type="primary",
+                       use_container_width=True, 
+                       disabled=(not autorizado or st.session_state.auditoria_en_curso))
 
 # --- Zona principal ---
 if not url:
     st.info("Introduce una URL objetivo en la barra lateral para comenzar.")
     st.stop()
-
 
 if lanzar:
     if not (url.startswith("http://") or url.startswith("https://")):
@@ -156,7 +158,11 @@ if lanzar:
     if not autorizado:
         st.error("Debes confirmar la autorizacion para auditar.")
         st.stop()
+    
+    st.session_state.auditoria_en_curso = True
+    st.rerun()
 
+if st.session_state.get("auditoria_en_curso", False):
     config = {
         "objetivo": {"url": url, "nombre": nombre, "autorizacion_confirmada": True},
         "modulos": modulos_activos,
@@ -235,23 +241,28 @@ if lanzar:
                        "Si no ves imagen, verifica que mapeaste -p 8080:8080.")
 
     with st.spinner("Auditoria en curso... esto puede tardar varios minutos."):
-        reporte = ejecutar_auditoria(config, logger, callback_progreso=callback)
+        try:
+            reporte = ejecutar_auditoria(config, logger, callback_progreso=callback)
 
-    barra.progress(100, text="Auditoria completada.")
-    estado.success("Auditoria completada.")
+            barra.progress(100, text="Auditoria completada.")
+            estado.success("Auditoria completada.")
 
-    datos = reporte.construir()
-    st.session_state["datos_reporte"] = datos
+            datos = reporte.construir()
+            st.session_state["datos_reporte"] = datos
 
-    carpeta = "resultados"
-    reporte.guardar_json(carpeta)
-    rutas = generar_informe(datos, carpeta, ["html", "pdf"], logger)
-    st.session_state["rutas_informe"] = rutas
+            carpeta = "resultados"
+            reporte.guardar_json(carpeta)
+            rutas = generar_informe(datos, carpeta, ["html", "pdf"], logger)
+            st.session_state["rutas_informe"] = rutas
 
-    # Guardar la ruta del ultimo video (si el agente uso el navegador).
-    videos = sorted(glob.glob(os.path.join(carpeta, "video", "*.webm")),
-                    key=os.path.getmtime, reverse=True)
-    st.session_state["video_agente"] = videos[0] if videos else None
+            # Guardar la ruta del ultimo video (si el agente uso el navegador).
+            videos = sorted(glob.glob(os.path.join(carpeta, "video", "*.webm")),
+                            key=os.path.getmtime, reverse=True)
+            st.session_state["video_agente"] = videos[0] if videos else None
+
+        finally:
+            st.session_state.auditoria_en_curso = False
+            st.rerun()
 
 
 # --- Mostrar resultados (si existen) ---

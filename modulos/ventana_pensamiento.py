@@ -53,8 +53,9 @@ def _main_ventana(archivo):
                             root.title("Razonamiento del agente (finalizado)")
                             continue
                         icono = ICONOS.get(tipo, "")
-                        txt.insert("end", f"{icono} {texto}\n\n", tipo)
-                        txt.see("end")
+                        txt.insert(tk.END, f"{icono} {texto}\n\n", tipo)
+                        txt.see(tk.END)
+                        txt.yview_moveto(1.0)
                     estado["pos"] = f.tell()
         except Exception:
             pass
