@@ -32,9 +32,18 @@ corriendo en tu propia máquina:
 
 ## Requisitos
 
+Común a cualquier instalación:
+
 - **Ollama:** para correr el modelo de IA local. Descárgalo en https://ollama.com
-- **Python 3.12+:** para la instalación manual.
-- **Docker:** para la instalación con Docker (opción rápida).
+
+Si usas **Docker (Opción A, recomendada)**, no necesitas nada más. Nmap, SQLmap,
+Nuclei, ZAP y Playwright ya vienen preinstalados dentro de la imagen.
+
+- **Docker Desktop:** https://www.docker.com/products/docker-desktop/
+
+Si usas la **instalación manual (Opción B)**, necesitas además:
+
+- **Python 3.12+**
 - Herramientas de sistema según los módulos que actives: `nmap`, `sqlmap`,
   `nuclei` (opcionales: los módulos que no tengan su herramienta se saltan).
 
