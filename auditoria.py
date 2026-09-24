@@ -68,6 +68,10 @@ def ejecutar_auditoria(config: dict, logger: logging.Logger,
         except Exception as e:
             logger.error(f"Error en el modulo {nombre_modulo}: {e}")
 
+    # Resumen de cierre del agente de IA (bitacora + narrativa), si lo genero.
+    if config.get("_resumen_agente"):
+        reporte.set_resumen_agente(config["_resumen_agente"])
+
     if callback_progreso:
         callback_progreso(total, total, "analisis de riesgo")
 

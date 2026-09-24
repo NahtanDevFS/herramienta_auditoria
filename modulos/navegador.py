@@ -14,6 +14,27 @@ ERRORES_SQL = ["sql syntax", "sqlite", "psql", "ora-", "mysql_fetch",
                "warning: mysql", "syntax error"]
 
 
+def _reflejo_xss_peligroso(payload: str, contenido_html: str) -> bool:
+    # Decide si el payload se refleja de forma REALMENTE peligrosa (posible XSS),
+    # para no marcar falsos positivos (p.ej. un payload SQL como "' OR 1=1--" que
+    # el buscador simplemente muestra de vuelta como texto).
+    #   1) El payload debe traer caracteres HTML activos: una etiqueta (<...>),
+    #      un 'javascript:' o un manejador de evento (onerror=, onload=, ...).
+    #      Un texto plano sin esto NO puede ejecutarse aunque se refleje.
+    #   2) Debe aparecer SIN escapar en el HTML. Si el framework lo escapo
+    #      (&lt;script&gt;), el crudo '<script>' no estara presente y es seguro.
+    # No afecta la deteccion fuerte (xss_confirmado por dialog) ni la de SQLi.
+    p = (payload or "").lower()
+    if not p:
+        return False
+    tiene_html = (("<" in p and ">" in p)
+                  or "javascript:" in p
+                  or bool(re.search(r"on\w+\s*=", p)))
+    if not tiene_html:
+        return False
+    return p in (contenido_html or "")
+
+
 class NavegadorAgente:
 
     def __init__(self, url_objetivo, carpeta_capturas="resultados/capturas",
@@ -411,7 +432,7 @@ class NavegadorAgente:
             time.sleep(1.5)
             self._captura("busqueda: resultado")
             contenido = (self._page.content() or "").lower()
-            posible_reflejo = payload.lower() in contenido
+            posible_reflejo = _reflejo_xss_peligroso(payload, contenido)
             xss_confirmado = dialog_disparado[0]
             error_sql = next((e for e in ERRORES_SQL if e in contenido), None)
 
@@ -527,7 +548,7 @@ class NavegadorAgente:
             time.sleep(1.5)
             self._captura("formulario: resultado")
             contenido = (self._page.content() or "").lower()
-            posible_reflejo = payload.lower() in contenido
+            posible_reflejo = _reflejo_xss_peligroso(payload, contenido)
             xss_confirmado = dialog_disparado[0]
             error_sql = next((e for e in ERRORES_SQL if e in contenido), None)
 

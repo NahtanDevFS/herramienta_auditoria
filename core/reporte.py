@@ -34,10 +34,15 @@ class Reporte:
         self.inicio = datetime.now()
         self.fin: datetime | None = None
         self.analisis_riesgo = None
-    
+        self.resumen_agente = None
+
     def set_analisis_riesgo(self, analisis: dict) -> None:
         # Guarda el analisis de riesgos (de la Fase 5) para incluirlo en el reporte.
         self.analisis_riesgo = analisis
+
+    def set_resumen_agente(self, resumen: dict) -> None:
+        # Guarda el resumen de cierre del agente de IA (bitacora + narrativa).
+        self.resumen_agente = resumen
 
     def agregar(self, hallazgo: Hallazgo) -> None:
         # Añade un unico hallazgo al reporte.
@@ -98,6 +103,10 @@ class Reporte:
         # Añadir el analisis de riesgo si existe (Fase 5).
         if self.analisis_riesgo:
             datos["analisis_riesgo"] = self.analisis_riesgo
+
+        # Añadir el resumen de cierre del agente de IA si existe.
+        if self.resumen_agente:
+            datos["resumen_agente"] = self.resumen_agente
 
         return datos
 

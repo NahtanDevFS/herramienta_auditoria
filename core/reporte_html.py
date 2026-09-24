@@ -209,6 +209,38 @@ celda indica cuantos hallazgos caen en ese nivel de riesgo.</p>
 </div>
 {% endfor %}
 
+{% if resumen_agente %}
+<div class="categoria-seccion">
+<h1>4. Cierre del Agente de IA</h1>
+<p>Resumen de lo que el agente de IA probo de forma activa sobre el objetivo,
+su valoracion y las lineas que quedarian pendientes.</p>
+
+{% if resumen_agente.narrativa %}
+<h3>Valoracion del agente</h3>
+{% for parrafo in resumen_agente.narrativa.split('\n') %}{% if parrafo.strip() %}<p>{{ parrafo.strip() }}</p>
+{% endif %}{% endfor %}
+{% endif %}
+
+<h3>Cobertura</h3>
+<p>El agente realizo <strong>{{ resumen_agente.num_acciones }}</strong> accion(es) sobre el objetivo.
+{% if resumen_agente.objetivos_totales %} Cubrio {{ resumen_agente.objetivos_cubiertos }} de {{ resumen_agente.objetivos_totales }} objetivo(s) del mapa del sitio.{% endif %}</p>
+{% if resumen_agente.objetivos_pendientes %}
+<div class="campo"><span class="etiqueta">Quedaria por probar:</span>
+{% for o in resumen_agente.objetivos_pendientes %}{{ o.tipo }} en {{ o.url }}{% if not loop.last %}, {% endif %}{% endfor %}.</div>
+{% endif %}
+
+{% if resumen_agente.acciones %}
+<h3>Bitacora de acciones</h3>
+<table>
+  <tr><th style="width:36px;">#</th><th>Accion</th><th>Resultado</th></tr>
+  {% for b in resumen_agente.acciones %}
+  <tr><td>{{ loop.index }}</td><td>{{ b.accion }}</td><td>{{ b.resultado }}</td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+</div>
+{% endif %}
+
 <div class="footer-nota">
   Informe generado automaticamente por la herramienta de auditoria de seguridad web.
   Los resultados de herramientas automaticas deben ser validados manualmente por un
@@ -305,6 +337,7 @@ def _preparar_contexto(datos: dict) -> dict:
         "color_nivel_global": color_nivel_global,
         "matriz": matriz,
         "hallazgos_por_categoria": hallazgos_por_categoria,
+        "resumen_agente": datos.get("resumen_agente"),
     }
 
 
