@@ -462,6 +462,14 @@ class NavegadorAgente:
         # Prueba IDOR: varia el id numerico de la URL original y compara respuesta.
         if not self._permitida(url):
             return {"error": "URL fuera del dominio autorizado."}
+        # GUARDA 1: un IDOR se prueba sobre un id LIMPIO (?id=5, /item/5). Si la URL
+        # trae caracteres de inyeccion (comillas, espacios, "--", %27...), no es un
+        # id legitimo sino un payload: no tiene sentido probar IDOR ahi.
+        marcadores_inyeccion = ("'", '"', " ", "--", "%27", "%22", "%20")
+        if any(m in url for m in marcadores_inyeccion):
+            return {"error": "La URL no es un id limpio (parece traer un payload de "
+                             "inyeccion). Para IDOR da una URL con id numerico simple, "
+                             "por ejemplo .../item/5 o ...?id=5."}
         from urllib.parse import urlparse, urlunparse
         p = urlparse(url)
         # Buscar el numero SOLO en la ruta o el query, nunca en el host:puerto.
@@ -484,21 +492,32 @@ class NavegadorAgente:
 
             self._page.goto(url, wait_until="domcontentloaded"); time.sleep(1.0)
             self._captura(f"idor: original id={id_orig}")
-            len_orig = len(self._page.content() or "")
+            contenido_orig = self._page.content() or ""
+            len_orig = len(contenido_orig)
 
             if not self._permitida(url_var):
                 return {"error": "La variacion sale del dominio autorizado."}
             self._page.goto(url_var, wait_until="domcontentloaded"); time.sleep(1.0)
             self._captura(f"idor: variacion id={id_var}")
-            len_var = len(self._page.content() or "")
+            contenido_var = self._page.content() or ""
+            len_var = len(contenido_var)
 
-            accesible = len_var > 200
+            # GUARDA 2: en un SPA, CUALQUIER ruta devuelve el mismo shell HTML (mismo
+            # tamano), asi que "hay contenido" no significa nada. Solo es indicio de
+            # IDOR si la variacion devuelve algo REALMENTE distinto del original (no
+            # el mismo shell). Si son identicas o casi identicas, NO es IDOR.
+            dif = abs(len_var - len_orig)
+            identicas = contenido_var == contenido_orig
+            accesible = (len_var > 200 and not identicas and dif > 100)
             return {"ok": True, "id_original": id_orig, "id_variado": id_var,
                     "url_variada": url_var, "tam_original": len_orig,
-                    "tam_variado": len_var, "variacion_accesible": accesible,
-                    "nota": ("La variacion del id devolvio contenido: posible IDOR "
-                             "(revisar si son datos de otro usuario)." if accesible
-                             else "La variacion no devolvio contenido util.")}
+                    "tam_variado": len_var, "diferencia": dif,
+                    "variacion_accesible": accesible,
+                    "nota": ("La variacion del id devolvio contenido DISTINTO: posible "
+                             "IDOR (revisar si son datos de otro usuario)." if accesible
+                             else ("La variacion devolvio la misma pagina (mismo shell): "
+                                   "sin indicio de IDOR. En un SPA los datos van por API, "
+                                   "revisar los endpoints."))}
         except Exception as e:
             self._captura("idor: error")
             return {"error": f"Error durante la prueba IDOR: {e}"}
