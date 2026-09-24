@@ -580,6 +580,47 @@ class NavegadorAgente:
             self._log(f"video de la sesion -> {video_path}")
         return video_path
 
+    def finalizar_dejando_abierto(self):
+        # Guarda el video (cerrando el contexto grabador) pero DEJA el navegador
+        # abierto: abre una pestana nueva en el objetivo. No detiene Playwright ni
+        # cierra el navegador, asi la ventana sigue visible en el escritorio virtual
+        # (el proceso que llama debe seguir vivo para que Chromium no se cierre).
+        video_path = None
+        cookies = []
+        try:
+            cookies = self._context.cookies()  # conservar sesion para la ventana visible
+        except Exception:
+            cookies = []
+        try:
+            video = self._page.video
+            self._context.close()   # finaliza y guarda el video de la sesion
+            if video:
+                video_path = video.path()
+        except Exception as e:
+            self._log(f"cierre de contexto (video): {e}")
+        # Abrir un contexto/pestana nuevos (sin grabar) para dejar algo a la vista,
+        # reinyectando las cookies para mantener la sesion cuando el login es por cookie.
+        try:
+            self._context = self._browser.new_context(
+                ignore_https_errors=True,
+                viewport={"width": 1280, "height": 800})
+            if cookies:
+                try:
+                    self._context.add_cookies(cookies)
+                except Exception:
+                    pass
+            self._page = self._context.new_page()
+            try:
+                self._page.goto(self.url_objetivo, wait_until="domcontentloaded",
+                                timeout=12000)
+            except Exception:
+                pass
+        except Exception as e:
+            self._log(f"no se pudo dejar el navegador abierto: {e}")
+        if video_path:
+            self._log(f"video de la sesion -> {video_path}")
+        return video_path
+
 
 def declarar_tools_navegador():
     # Tools genericas de alto nivel (optimizadas para LLMs 7B-8B).

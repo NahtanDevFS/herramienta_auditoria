@@ -76,6 +76,47 @@ def _ruta_spa(url):
     return p.fragment or p.path or "/"
 
 
+def _iniciar_sesion(page, objetivo, usuario, contrasena):
+    # Inicia sesion antes de rastrear, para poder ver la zona privada (rutas
+    # reales que el login no enlaza). Prueba el objetivo y rutas de login comunes.
+    origen = _origen(objetivo)
+    candidatos = [objetivo] + [origen + r for r in
+                               ("/login", "/signin", "/admin", "/#/login")]
+    for cand in candidatos:
+        try:
+            page.goto(cand, wait_until="domcontentloaded")
+            page.wait_for_timeout(1000)
+            _descartar_overlays(page)
+            u = page.locator("input[type=email], input[name*=user i], "
+                             "input[id*=user i], input[type=text]").first
+            p = page.locator("input[type=password]").first
+            if u.count() == 0 or p.count() == 0 or not p.is_visible():
+                continue
+            u.fill(usuario)
+            p.fill(contrasena)
+            btn = page.locator("button[type=submit], #loginButton, "
+                               "button:has-text('Entrar'), button:has-text('Iniciar'), "
+                               "button:has-text('Login'), button:has-text('Log in')").first
+            if btn.count() > 0:
+                try:
+                    btn.click()
+                except Exception:
+                    p.press("Enter")
+            else:
+                p.press("Enter")
+            page.wait_for_timeout(1800)
+            hay_pass = page.locator("input[type=password]").count() > 0
+            tok = page.evaluate(
+                "() => { try { for (let i=0;i<localStorage.length;i++){"
+                "const v=localStorage.getItem(localStorage.key(i))||''; "
+                "if(v.length>20) return true;} } catch(e){} return false; }")
+            if (not hay_pass) or tok:
+                return True
+        except Exception:
+            continue
+    return False
+
+
 def _compactar_mapa(mapa, maximo=15):
     # Deduplica por RUTA de SPA (no por URL completa) y prioriza login/busqueda.
     # Asi /login, /admin#/login y /administrator#/login (misma vista) cuentan una vez.
@@ -92,7 +133,7 @@ def _compactar_mapa(mapa, maximo=15):
     return salida
 
 
-def rastrear(objetivo, max_paginas, max_prof):
+def rastrear(objetivo, max_paginas, max_prof, usuario=None, contrasena=None):
     from playwright.sync_api import sync_playwright
 
     dominio = urlparse(objetivo).netloc
@@ -129,6 +170,20 @@ def rastrear(objetivo, max_paginas, max_prof):
             pass
 
     page.on("request", _capturar_peticion)
+
+    # Si hay credenciales, iniciar sesion ANTES de rastrear: asi el DOM ya
+    # autenticado enlaza a las rutas reales de la zona privada.
+    if usuario and contrasena:
+        try:
+            if _iniciar_sesion(page, objetivo, usuario, contrasena):
+                print("[crawler_worker] Sesion iniciada; se rastreara la zona "
+                      "autenticada.", file=sys.stderr)
+            else:
+                print("[crawler_worker] No se pudo iniciar sesion; rastreo anonimo.",
+                      file=sys.stderr)
+        except Exception:
+            pass
+
     try:
         while cola and len(visitadas) < max_paginas:
             url, prof = cola.popleft()
@@ -234,8 +289,11 @@ def main():
     max_paginas = int(sys.argv[2])
     max_prof = int(sys.argv[3])
     salida = sys.argv[4]
+    import os
+    usuario = os.environ.get("CRAWLER_USER") or None
+    contrasena = os.environ.get("CRAWLER_PASS") or None
     try:
-        resultado = rastrear(objetivo, max_paginas, max_prof)
+        resultado = rastrear(objetivo, max_paginas, max_prof, usuario, contrasena)
         with open(salida, "w", encoding="utf-8") as f:
             json.dump(resultado, f, ensure_ascii=False)
     except Exception as e:

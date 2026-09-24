@@ -97,10 +97,46 @@ def _worker_auditoria(config, ruta_log, ruta_estado, cola):
         except Exception:
             pass
 
+    # Si el agente dejo el navegador abierto, el proceso NO debe terminar: Playwright
+    # cierra Chromium al morir su proceso. Nos quedamos vivos (el resultado ya se
+    # entrego por la cola) hasta que el proceso principal nos mate (killpg) al
+    # iniciar otra auditoria o al pulsar Detener.
+    if config.get("_navegador_abierto") is not None:
+        import time as _t
+        while True:
+            _t.sleep(3600)
+
+
+def _matar_proceso(proc):
+    # Mata un proceso worker y todo su grupo (Chromium, ventana de razonamiento).
+    import signal
+    if proc is None or not proc.pid:
+        return
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        if not proc.is_alive():
+            break
+        try:
+            os.killpg(os.getpgid(proc.pid), sig)
+        except OSError:
+            try:
+                proc.terminate() if sig == signal.SIGTERM else proc.kill()
+            except Exception:
+                pass
+        proc.join(timeout=5)
+
+
+def _cerrar_navegador_abierto():
+    # Cierra el navegador que quedo abierto de una auditoria anterior (si lo hay).
+    prev = st.session_state.pop("proc_navegador", None)
+    if prev is not None:
+        _matar_proceso(prev)
+
 
 def _lanzar_auditoria_en_proceso(config, mostrar_monitor):
     import multiprocessing
     import tempfile
+    # Cerrar el navegador que hubiera quedado abierto de una corrida anterior.
+    _cerrar_navegador_abierto()
     ctx = multiprocessing.get_context("fork")  # fork: el hijo NO reimporta app_gui
     base = tempfile.gettempdir()
     ruta_log = os.path.join(base, "auditoria_live.log")
@@ -128,21 +164,10 @@ def _limpiar_estado_auditoria():
 
 
 def _detener_auditoria():
-    import signal
-    proc = st.session_state.get("proc")
-    if proc is not None and proc.pid:
-        for sig in (signal.SIGTERM, signal.SIGKILL):
-            if not proc.is_alive():
-                break
-            try:
-                # Mata al grupo completo (worker + Chromium + ventana de razonamiento).
-                os.killpg(os.getpgid(proc.pid), sig)
-            except OSError:
-                try:
-                    proc.terminate() if sig == signal.SIGTERM else proc.kill()
-                except Exception:
-                    pass
-            proc.join(timeout=5)
+    # Mata el worker (y su grupo: Chromium + ventana de razonamiento) y cierra
+    # tambien cualquier navegador que hubiera quedado abierto de antes.
+    _matar_proceso(st.session_state.get("proc"))
+    _cerrar_navegador_abierto()
     _limpiar_estado_auditoria()
     st.session_state["error_auditoria"] = "Auditoria detenida por el usuario."
 
@@ -223,6 +248,11 @@ def _panel_en_curso():
             st.session_state["video_agente"] = resultado.get("video")
         else:
             st.session_state["error_auditoria"] = resultado.get("error", "desconocido")
+        # Si se dejo el navegador abierto, el worker sigue vivo manteniendolo. Se
+        # conserva su handle para poder cerrarlo al iniciar otra auditoria/detener.
+        cfg_ag = (st.session_state.get("config_auditoria", {}) or {}).get("agente_ia", {})
+        if cfg_ag.get("mantener_navegador_abierto") and proc is not None and proc.is_alive():
+            st.session_state["proc_navegador"] = proc
         _limpiar_estado_auditoria()
         st.rerun()
 
@@ -372,6 +402,9 @@ if lanzar:
             "contrasena": cred_contrasena,
             "limite_acciones": limite_acciones_agente,
             "timeout_sesion_seg": timeout_agente,
+            # Dejar el navegador abierto al terminar (solo tiene sentido si es visible).
+            "mantener_navegador_abierto": bool(
+                modulos_activos.get("agente_ia") and usar_navegador and abrir_ventana),
         },
     }
     st.session_state.mostrar_monitor = bool(

@@ -35,13 +35,22 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     max_profundidad = conf_crawler.get("max_profundidad", MAX_PROFUNDIDAD_DEFECTO)
     render_js = conf_crawler.get("render_js", True)
 
+    # Credenciales (si las hay): permiten rastrear TAMBIEN la zona autenticada, y
+    # asi descubrir rutas reales que no son visibles sin iniciar sesion (el login
+    # no enlaza a la zona privada). Sin esto, en un SPA solo se ve el login.
+    agente_cfg = config.get("agente_ia", {}) or {}
+    aut_cfg = config.get("autenticacion", {}) or {}
+    usuario = agente_cfg.get("usuario") or aut_cfg.get("usuario")
+    contrasena = agente_cfg.get("contrasena") or aut_cfg.get("contrasena")
+
     dominio = urlparse(objetivo).netloc
     logger.info(f"[crawler] Iniciando rastreo de {objetivo} "
                 f"(max {max_paginas} paginas, profundidad {max_profundidad})")
 
     datos = None
     if render_js:
-        datos = _rastrear_con_subproceso(objetivo, max_paginas, max_profundidad, logger)
+        datos = _rastrear_con_subproceso(objetivo, max_paginas, max_profundidad,
+                                         logger, usuario, contrasena)
 
     if datos is None:
         logger.info("[crawler] Usando rastreo HTTP clasico (sin render de JS).")
@@ -69,16 +78,27 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 
 # --- Rastreo con navegador (Subproceso aislado) ---
-def _rastrear_con_subproceso(objetivo, max_paginas, max_prof, logger):
+def _rastrear_con_subproceso(objetivo, max_paginas, max_prof, logger,
+                             usuario=None, contrasena=None):
     tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
     tmp.close()
     salida_json = tmp.name
     try:
         cmd = [sys.executable, "-m", "modulos.crawler_worker",
                objetivo, str(max_paginas), str(max_prof), salida_json]
+        # Las credenciales se pasan por variables de entorno (no por argv, que es
+        # visible en la lista de procesos).
+        env = os.environ.copy()
+        if usuario:
+            env["CRAWLER_USER"] = usuario
+        if contrasena:
+            env["CRAWLER_PASS"] = contrasena
+        if usuario and contrasena:
+            logger.info("[crawler] Rastreo AUTENTICADO: se intentara iniciar sesion "
+                        "antes de mapear, para descubrir la zona privada.")
         logger.info("[crawler] Lanzando rastreo con navegador en subproceso...")
         proc = subprocess.run(cmd, capture_output=True, text=True,
-                              timeout=TIMEOUT_WORKER_SEG)
+                              timeout=TIMEOUT_WORKER_SEG, env=env)
         if proc.returncode != 0:
             detalle = (proc.stderr or "").strip().splitlines()[-1:] or ["sin detalle"]
             logger.warning(f"[crawler] El subproceso del navegador fallo: {detalle[0]}")
