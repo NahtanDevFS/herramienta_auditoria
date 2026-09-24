@@ -142,7 +142,7 @@ with st.sidebar:
     if "auditoria_en_curso" not in st.session_state:
         st.session_state.auditoria_en_curso = False
 
-    lanzar = st.button("🚀 Iniciar auditoria", type="primary",
+    lanzar = st.button("Iniciar auditoria", type="primary",
                        use_container_width=True, 
                        disabled=(not autorizado or st.session_state.auditoria_en_curso))
 
