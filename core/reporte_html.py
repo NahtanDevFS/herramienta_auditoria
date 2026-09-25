@@ -7,7 +7,9 @@ import logging
 import os
 from datetime import datetime
 
-from jinja2 import Template
+from jinja2 import Environment, select_autoescape
+
+env = Environment(autoescape=select_autoescape(['html', 'xml']))
 
 
 # Colores por severidad (se usan en el HTML/CSS)
@@ -31,7 +33,7 @@ COLOR_NIVEL = {
 
 # Plantilla HTML del informe (Jinja2) El CSS esta embebido para que el
 # archivo sea autocontenido y WeasyPrint lo renderice bien a PDF
-PLANTILLA = Template(r"""<!DOCTYPE html>
+PLANTILLA = env.from_string(r"""<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
