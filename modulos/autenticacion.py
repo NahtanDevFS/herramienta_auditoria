@@ -1,6 +1,6 @@
-# autenticacion py Modulo de deteccion (A07: Authentication Failures)
-# Analiza la postura de seguridad de la autenticacion SIN hacer fuerza bruta
-# Comprueba rate limiting, enumeracion de usuarios, transmision y cookies
+# autenticacion py modulo de deteccion (a07: authentication failures)
+# analiza la postura de seguridad de la autenticacion sin hacer fuerza bruta
+# comprueba rate limiting, enumeracion de usuarios, transmision y cookies
 
 import logging
 import time
@@ -13,19 +13,19 @@ from core.modelo_hallazgo import Hallazgo
 
 ORIGEN = "modulo_autenticacion"
 
-# Numero de intentos por defecto para la prueba de rate limiting (POCOS)
+# numero de intentos por defecto para la prueba de rate limiting (pocos)
 MAX_INTENTOS_DEFECTO = 5
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    # Punto de entrada del modulo (lo llama main py)
-    # Analiza los controles de autenticacion del login configurado
+    # punto de entrada del modulo (lo llama main py)
+    # analiza los controles de autenticacion del login configurado
     conf = config.get("autenticacion", {})
     url_login = conf.get("url_login", "").strip()
 
     hallazgos: list[Hallazgo] = []
 
-    # Sin login configurado, no hay nada que analizar
+    # sin login configurado, no hay nada que analizar
     if not url_login:
         logger.warning(
             "[autenticacion] No se ha configurado 'url_login' en config.yaml "
@@ -47,7 +47,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
     logger.info(f"[autenticacion] Analizando el login en {url_login}")
 
-    # 1 Transmision de credenciales (HTTP vs HTTPS)
+    # 1 transmision de credenciales (HTTP vs HTTPS)
     if urlparse(url_login).scheme != "https":
         hallazgos.append(Hallazgo(
             titulo="Formulario de login servido sobre HTTP (sin cifrar)",
@@ -73,7 +73,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     sesion = requests.Session()
     sesion.headers.update(headers)
 
-    # 2 Prueba de rate limiting (POCOS intentos fallidos)
+    # 2 prueba de rate limiting (pocos intentos fallidos)
     hallazgos.extend(
         _probar_rate_limiting(
             sesion, url_login, campo_usuario, campo_password,
@@ -81,7 +81,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         )
     )
 
-    # 3 Enumeracion de usuarios (si se dio un usuario valido)
+    # 3 enumeracion de usuarios (si se dio un usuario valido)
     if usuario_valido:
         hallazgos.extend(
             _probar_enumeracion(
@@ -95,7 +95,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
             "prueba de enumeracion de usuarios."
         )
 
-    # 4 Gestion de la cookie de sesion
+    # 4 gestion de la cookie de sesion
     hallazgos.extend(
         _revisar_cookie_sesion(sesion, url_login, logger)
     )
@@ -108,7 +108,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 def _intento_login(sesion, url, campo_u, campo_p, usuario, password,
                    timeout, verificar_ssl):
-    # Hace un intento de login y devuelve la respuesta (o None si falla)
+    # hace un intento de login y devuelve la respuesta (o none si falla)
     datos = {campo_u: usuario, campo_p: password}
     try:
         return sesion.post(
@@ -121,8 +121,8 @@ def _intento_login(sesion, url, campo_u, campo_p, usuario, password,
 
 def _probar_rate_limiting(sesion, url, campo_u, campo_p, usuario,
                           max_intentos, timeout, verificar_ssl, logger):
-    # Envia unos pocos intentos fallidos y observa si el servidor los frena
-    # Si acepta todos sin ningun control, reporta falta de rate limiting
+    # envia unos pocos intentos fallidos y observa si el servidor los frena
+    # si acepta todos sin ningun control, reporta falta de rate limiting
     hallazgos = []
     logger.info(
         f"[autenticacion] Probando rate limiting con {max_intentos} intentos "
@@ -142,8 +142,8 @@ def _probar_rate_limiting(sesion, url, campo_u, campo_p, usuario,
 
         codigos.append(resp.status_code)
 
-        # Señales de que el servidor esta frenando los intentos
-        if resp.status_code == 429:  # Too Many Requests
+        # señales de que el servidor esta frenando los intentos
+        if resp.status_code == 429:  # too many requests
             bloqueado = True
             logger.info(
                 f"[autenticacion] El servidor respondio 429 en el intento "
@@ -162,7 +162,7 @@ def _probar_rate_limiting(sesion, url, campo_u, campo_p, usuario,
 
         time.sleep(0.5)  # pausa breve entre intentos (ser educado)
 
-    # Si hicimos todos los intentos sin ninguna señal de bloqueo > hallazgo
+    # si hicimos todos los intentos sin ninguna señal de bloqueo > hallazgo
     if not bloqueado and len(codigos) >= max_intentos:
         hallazgos.append(Hallazgo(
             titulo="Ausencia de proteccion contra fuerza bruta (sin rate limiting)",
@@ -194,8 +194,8 @@ def _probar_rate_limiting(sesion, url, campo_u, campo_p, usuario,
 
 def _probar_enumeracion(sesion, url, campo_u, campo_p, usuario_valido,
                         usuario_invalido, timeout, verificar_ssl, logger):
-    # Compara la respuesta ante un usuario valido vs uno inexistente
-    # Si difieren mucho, el sistema permite enumerar usuarios
+    # compara la respuesta ante un usuario valido vs uno inexistente
+    # si difieren mucho, el sistema permite enumerar usuarios
     hallazgos = []
     logger.info("[autenticacion] Probando enumeracion de usuarios...")
 
@@ -212,7 +212,7 @@ def _probar_enumeracion(sesion, url, campo_u, campo_p, usuario_valido,
         logger.debug("[autenticacion] No se pudo completar la prueba de enumeracion.")
         return hallazgos
 
-    # Comparar codigo y longitud de respuesta Diferencias notables sugieren
+    # comparar codigo y longitud de respuesta diferencias notables sugieren
     # que el sistema trata distinto a usuarios existentes vs inexistentes
     dif_codigo = r_valido.status_code != r_invalido.status_code
     dif_longitud = abs(len(r_valido.text) - len(r_invalido.text)) > 50
@@ -248,13 +248,13 @@ def _probar_enumeracion(sesion, url, campo_u, campo_p, usuario_valido,
 
 
 def _revisar_cookie_sesion(sesion, url, logger):
-    # Revisa los flags de las cookies de sesion establecidas durante el login
+    # revisa los flags de las cookies de sesion establecidas durante el login
     hallazgos = []
 
-    # Las cookies acumuladas en la sesion tras los intentos anteriores
+    # las cookies acumuladas en la sesion tras los intentos anteriores
     for cookie in sesion.cookies:
         nombre = cookie.name
-        # Nos centramos en cookies que parecen de sesion
+        # nos centramos en cookies que parecen de sesion
         if not any(k in nombre.lower() for k in
                    ["sess", "session", "sid", "token", "auth"]):
             continue
@@ -295,9 +295,9 @@ def _revisar_cookie_sesion(sesion, url, logger):
     return hallazgos
 
 
-# Prueba independiente:
+# prueba independiente:
 # python3 m modulos autenticacion
-# Requiere un objetivo con login AUTORIZADO configurado
+# requiere un objetivo con login autorizado configurado
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")

@@ -1,7 +1,7 @@
-# tecnologias py Modulo de deteccion de tecnologias (A03: Software Supply Chain)
-# Identifica servidor, lenguaje, framework, CMS, librerias JS y sus versiones
-# Combina Wappalyzer, cabeceras HTTP, meta generator y rutas de librerias JS
-# Util para encontrar componentes con versiones vulnerables
+# tecnologias py modulo de deteccion de tecnologias (a03: software supply chain)
+# identifica servidor, lenguaje, framework, cms, librerias js y sus versiones
+# combina wappalyzer, cabeceras HTTP, meta generator y rutas de librerias js
+# util para encontrar componentes con versiones vulnerables
 
 import logging
 import re
@@ -15,26 +15,26 @@ from core.modelo_hallazgo import Hallazgo
 ORIGEN = "modulo_tecnologias"
 
 
-# Patrones para extraer libreria + version de las rutas de scripts y estilos
-# Los desarrolladores suelen dejar la version en el nombre del archivo o en la
-# URL del CDN, lo que es una fuente de versiones muy fiable para A06
+# patrones para extraer libreria + version de las rutas de scripts y estilos
+# los desarrolladores suelen dejar la version en el nombre del archivo o en la
+# URL del cdn, lo que es una fuente de versiones muy fiable para a06
 
 PATRONES_JS = [
-    # Archivo local con version: /js/jquery 3 6 0 min js o angular 1 8 2 js
+    # archivo local con version: /js/jquery 3 6 0 min js o angular 1 8 2 js
     re.compile(r"/([a-zA-Z0-9_\-\.]+?)[-\.](\d+\.\d+(?:\.\d+)?)(?:\.min)?\.(?:js|css)", re.I),
-    # CDN estilo cdnjs: /ajax/libs/bootstrap/5 1 3/js/bootstrap min js
+    # cdn estilo cdnjs: /ajax/libs/bootstrap/5 1 3/js/bootstrap min js
     re.compile(r"/libs?/([a-zA-Z0-9_\-\.]+)/(\d+\.\d+(?:\.\d+)?)/", re.I),
-    # CDN estilo npm/unpkg/jsdelivr: /react@17 0 2/umd/react js
+    # cdn estilo npm/unpkg/jsdelivr: /react@17 0 2/umd/react js
     re.compile(r"/([a-zA-Z0-9_\-\.]+)@(\d+\.\d+(?:\.\d+)?)", re.I),
 ]
 
-# Nombres genericos que no son librerias reales (evitar ruido)
+# nombres genericos que no son librerias reales (evitar ruido)
 IGNORAR_JS = {"app", "main", "index", "bundle", "script", "scripts", "style",
               "styles", "vendor", "common", "runtime", "chunk", "polyfills"}
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    # Punto de entrada Combina Wappalyzer, cabeceras y meta generator para el inventario
+    # punto de entrada combina wappalyzer, cabeceras y meta generator para el inventario
     objetivo = config["objetivo"]["url"].strip()
     opciones = config.get("opciones", {})
     timeout = opciones.get("timeout", 10)
@@ -48,7 +48,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     # tecnologias detectadas: nombre > conjunto de versiones (puede ir vacio)
     inventario: dict[str, set] = {}
 
-    # Fuente 1: cabeceras HTTP (rapido y preciso para versiones)
+    # fuente 1: cabeceras HTTP (rapido y preciso para versiones)
     try:
         resp = requests.get(
             objetivo,
@@ -65,16 +65,16 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         _analizar_cabeceras(resp, objetivo, inventario, logger)
     )
 
-    # Fuente 2: meta generator en el HTML
+    # fuente 2: meta generator en el HTML
     _analizar_meta_generator(resp.text, inventario, logger)
 
-    # Fuente 3: versiones de librerias JS/CSS en el HTML
+    # fuente 3: versiones de librerias js/css en el HTML
     _analizar_librerias_js(resp.text, inventario, logger)
 
-    # Fuente 4: Wappalyzer (inventario amplio)
+    # fuente 4: wappalyzer (inventario amplio)
     _analizar_wappalyzer(objetivo, inventario, logger)
 
-    # Hallazgo informativo con el inventario completo
+    # hallazgo informativo con el inventario completo
     if inventario:
         lineas = []
         for tech in sorted(inventario):
@@ -112,17 +112,17 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 
 def _limpiar_version(version: str) -> str | None:
-    # Limpia una cadena de version dejando solo el numero (ej: '2 4 41')
+    # limpia una cadena de version dejando solo el numero (ej: '2 4 41')
     if not version:
         return None
-    # Extraer el primer patron tipo X Y o X Y Z del texto
+    # extraer el primer patron tipo x y o x y z del texto
     m = re.search(r"\d+(?:\.\d+)+", version)
     return m.group(0) if m else None
 
 
 def _agregar(inventario: dict, nombre: str, version: str | None = None) -> None:
-    # Añade una tecnologia (y opcionalmente su version) al inventario
-    # Limpiar el nombre de parentesis y comas sueltas
+    # añade una tecnologia (y opcionalmente su version) al inventario
+    # limpiar el nombre de parentesis y comas sueltas
     nombre = nombre.strip().strip("(),").strip()
     if not nombre or len(nombre) < 2:
         return
@@ -135,11 +135,11 @@ def _agregar(inventario: dict, nombre: str, version: str | None = None) -> None:
 
 
 def _analizar_cabeceras(resp, objetivo, inventario, logger) -> list[Hallazgo]:
-    # Extrae tecnologias y versiones de las cabeceras Server y X Powered By
+    # extrae tecnologias y versiones de las cabeceras server y x powered by
     hallazgos: list[Hallazgo] = []
     headers = resp.headers
 
-    # Cabeceras que suelen revelar software y version
+    # cabeceras que suelen revelar software y version
     cabeceras_reveladoras = {
         "Server": "Servidor web",
         "X-Powered-By": "Framework/lenguaje",
@@ -154,10 +154,10 @@ def _analizar_cabeceras(resp, objetivo, inventario, logger) -> list[Hallazgo]:
         if not valor:
             continue
 
-        # ¿El valor incluye una version? (ej: "Apache/2 4 41", "PHP/8 1 2")
+        # ¿el valor incluye una version? (ej: "apache/2 4 41", "php/8 1 2")
         tiene_version = bool(re.search(r"\d+\.\d+", valor))
 
-        # Registrar en el inventario, separando nombre/version si trae "/"
+        # registrar en el inventario, separando nombre/version si trae "/"
         for parte in valor.split():
             if "/" in parte:
                 nombre, _, ver = parte.partition("/")
@@ -165,7 +165,7 @@ def _analizar_cabeceras(resp, objetivo, inventario, logger) -> list[Hallazgo]:
             else:
                 _agregar(inventario, parte)
 
-        # Si expone una version concreta, es un hallazgo A06
+        # si expone una version concreta, es un hallazgo a06
         if tiene_version:
             hallazgos.append(Hallazgo(
                 titulo=f"Version de software expuesta en cabecera {cabecera}",
@@ -193,8 +193,8 @@ def _analizar_cabeceras(resp, objetivo, inventario, logger) -> list[Hallazgo]:
 
 
 def _analizar_meta_generator(html: str, inventario: dict, logger) -> None:
-    # Busca la etiqueta <meta name='generator'> que revela CMS y version
-    # Ejemplo: <meta name="generator" content="WordPress 6 4 2" />
+    # busca la etiqueta <meta name='generator'> que revela cms y version
+    # ejemplo: <meta name="generator" content="wordpress 6 4 2" />
     patron = re.compile(
         r'<meta[^>]*name=["\']generator["\'][^>]*content=["\']([^"\']+)["\']',
         re.IGNORECASE,
@@ -205,7 +205,7 @@ def _analizar_meta_generator(html: str, inventario: dict, logger) -> None:
     contenido = m.group(1).strip()
     logger.info(f"[tecnologias] Meta generator: {contenido}")
 
-    # Separar nombre y version (ej: "WordPress 6 4 2")
+    # separar nombre y version (ej: "wordpress 6 4 2")
     m2 = re.match(r"(.+?)\s+([\d.]+)", contenido)
     if m2:
         _agregar(inventario, m2.group(1), m2.group(2))
@@ -214,8 +214,8 @@ def _analizar_meta_generator(html: str, inventario: dict, logger) -> None:
 
 
 def _analizar_librerias_js(html: str, inventario: dict, logger) -> None:
-    # Extrae librerias JS/CSS y sus versiones de los src/href del HTML
-    # Recoger todas las rutas de scripts y hojas de estilo
+    # extrae librerias js/css y sus versiones de los src/href del HTML
+    # recoger todas las rutas de scripts y hojas de estilo
     recursos = re.findall(r'(?:src|href)=["\']([^"\']+)["\']', html, re.IGNORECASE)
 
     detectadas = 0
@@ -227,7 +227,7 @@ def _analizar_librerias_js(html: str, inventario: dict, logger) -> None:
             libreria = m.group(1).lower().strip("/.-")
             version = m.group(2)
 
-            # Descartar nombres genericos que no son librerias reales
+            # descartar nombres genericos que no son librerias reales
             if libreria in IGNORAR_JS or len(libreria) < 2:
                 break
 
@@ -244,15 +244,15 @@ def _analizar_librerias_js(html: str, inventario: dict, logger) -> None:
 
 
 def _analizar_wappalyzer(objetivo, inventario, logger) -> None:
-    # Usa Wappalyzer para un inventario amplio Es opcional (falla suave)
+    # usa wappalyzer para un inventario amplio es opcional (falla suave)
     try:
-        # Wappalyzer emite muchos warnings irrelevantes los silenciamos
+        # wappalyzer emite muchos warnings irrelevantes los silenciamos
         warnings.filterwarnings("ignore")
         from Wappalyzer import Wappalyzer, WebPage
     except Exception as e:
-        # Capturamos CUALQUIER error de import, no solo ImportError La libreria
-        # python Wappalyzer esta desactualizada y en versiones recientes de
-        # Python (3 12+) su import puede fallar con otros tipos de error
+        # capturamos cualquier error de import, no solo importerror la libreria
+        # python wappalyzer esta desactualizada y en versiones recientes de
+        # python (3 12+) su import puede fallar con otros tipos de error
         logger.info(
             f"[tecnologias] Wappalyzer no esta disponible ({type(e).__name__}: "
             f"{e}). Se usa la deteccion por cabeceras y meta, que es la mas "
@@ -276,15 +276,15 @@ def _analizar_wappalyzer(objetivo, inventario, logger) -> None:
             f"[tecnologias] Wappalyzer detecto {len(resultado)} tecnologia(s)."
         )
     except Exception as e:
-        # Wappalyzer puede fallar por muchas razones (red, parsing )
-        # No es critico: seguimos con lo que ya tenemos
+        # wappalyzer puede fallar por muchas razones (red, parsing )
+        # no es critico: seguimos con lo que ya tenemos
         logger.warning(
             f"[tecnologias] Wappalyzer no pudo completar el analisis: {e}. "
             f"Se continua con la deteccion por cabeceras y meta."
         )
 
 
-# Prueba independiente:
+# prueba independiente:
 # python3 m modulos tecnologias
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")

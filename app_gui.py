@@ -54,12 +54,12 @@ def configurar_logger():
     return logger
 
 
-# Ejecucion de la auditoria en un PROCESO aparte (cancelable con "Detener")
-# La auditoria hace llamadas bloqueantes (Ollama, Playwright) que Streamlit no
+# ejecucion de la auditoria en un proceso aparte (cancelable con "detener")
+# la auditoria hace llamadas bloqueantes (ollama, playwright) que streamlit no
 # puede interrumpir por eso corre en su propio proceso, que podemos matar por
-# completo (incluyendo Chromium y la ventana de razonamiento) al pulsar Detener
+# completo (incluyendo chromium y la ventana de razonamiento) al pulsar detener
 def _worker_auditoria(config, ruta_log, ruta_estado, cola):
-    # Corre en el proceso hijo Escribe log y progreso en archivos que la UI lee,
+    # corre en el proceso hijo escribe log y progreso en archivos que la ui lee,
     # y deja el resultado final en la cola
     os.setsid()  # nuevo grupo de procesos > permite matar todo el arbol al detener
     logger = logging.getLogger("auditoria_worker")
@@ -95,10 +95,10 @@ def _worker_auditoria(config, ruta_log, ruta_estado, cola):
         except Exception:
             pass
 
-    # Si el agente dejo el navegador abierto, el proceso NO debe terminar: Playwright
-    # cierra Chromium al morir su proceso Nos quedamos vivos (el resultado ya se
+    # si el agente dejo el navegador abierto, el proceso no debe terminar: playwright
+    # cierra chromium al morir su proceso nos quedamos vivos (el resultado ya se
     # entrego por la cola) hasta que el proceso principal nos mate (killpg) al
-    # iniciar otra auditoria o al pulsar Detener
+    # iniciar otra auditoria o al pulsar detener
     if config.get("_navegador_abierto") is not None:
         import time as _t
         while True:
@@ -106,7 +106,7 @@ def _worker_auditoria(config, ruta_log, ruta_estado, cola):
 
 
 def _matar_proceso(proc):
-    # Mata un proceso worker y todo su grupo (Chromium, ventana de razonamiento)
+    # mata un proceso worker y todo su grupo (chromium, ventana de razonamiento)
     import signal
     if proc is None or not proc.pid:
         return
@@ -124,7 +124,7 @@ def _matar_proceso(proc):
 
 
 def _cerrar_navegador_abierto():
-    # Cierra el navegador que quedo abierto de una auditoria anterior (si lo hay)
+    # cierra el navegador que quedo abierto de una auditoria anterior (si lo hay)
     prev = st.session_state.pop("proc_navegador", None)
     if prev is not None:
         _matar_proceso(prev)
@@ -133,9 +133,9 @@ def _cerrar_navegador_abierto():
 def _lanzar_auditoria_en_proceso(config, mostrar_monitor):
     import multiprocessing
     import tempfile
-    # Cerrar el navegador que hubiera quedado abierto de una corrida anterior
+    # cerrar el navegador que hubiera quedado abierto de una corrida anterior
     _cerrar_navegador_abierto()
-    ctx = multiprocessing.get_context("fork")  # fork: el hijo NO reimporta app_gui
+    ctx = multiprocessing.get_context("fork")  # fork: el hijo no reimporta app_gui
     base = tempfile.gettempdir()
     ruta_log = os.path.join(base, "auditoria_live.log")
     ruta_estado = os.path.join(base, "auditoria_estado.json")
@@ -162,7 +162,7 @@ def _limpiar_estado_auditoria():
 
 
 def _detener_auditoria():
-    # Mata el worker (y su grupo: Chromium + ventana de razonamiento) y cierra
+    # mata el worker (y su grupo: chromium + ventana de razonamiento) y cierra
     # tambien cualquier navegador que hubiera quedado abierto de antes
     _matar_proceso(st.session_state.get("proc"))
     _cerrar_navegador_abierto()
@@ -171,8 +171,8 @@ def _detener_auditoria():
 
 
 def _render_monitor(expanded=True):
-    # Panel plegable del Monitor en Vivo (noVNC) Se muestra durante la auditoria
-    # y TAMBIEN despues (el usuario decide si plegarlo), no desaparece al terminar
+    # panel plegable del monitor en vivo (novnc) se muestra durante la auditoria
+    # y tambien despues (el usuario decide si plegarlo), no desaparece al terminar
     import streamlit.components.v1 as components
     with st.expander("Monitor en Vivo (Escritorio Virtual)", expanded=expanded):
         vnc_html = """
@@ -191,16 +191,16 @@ def _render_monitor(expanded=True):
 
 @st.fragment(run_every="1s")
 def _panel_en_curso():
-    # Se auto refresca cada segundo SIN recargar el resto de la pagina (por eso el
+    # se auto refresca cada segundo sin recargar el resto de la pagina (por eso el
     # iframe del monitor en vivo, que va fuera del fragmento, no parpadea)
     proc = st.session_state.get("proc")
     cola = st.session_state.get("cola")
     ruta_log = st.session_state.get("ruta_log")
     ruta_estado = st.session_state.get("ruta_estado")
 
-    # (El boton de Detener vive en el sidebar, para que sea siempre visible )
+    # (el boton de detener vive en el sidebar, para que sea siempre visible )
 
-    # Barra de progreso (desde el archivo de estado)
+    # barra de progreso (desde el archivo de estado)
     indice, total, modulo = 0, 0, "preparando"
     try:
         with open(ruta_estado, encoding="utf-8") as f:
@@ -211,7 +211,7 @@ def _panel_en_curso():
     pct = int(indice / max(total, 1) * 100)
     st.progress(pct, text=f"Ejecutando: {modulo} ({indice}/{max(total, 1)})")
 
-    # Terminal de progreso en vivo (ultimas lineas del log)
+    # terminal de progreso en vivo (ultimas lineas del log)
     st.markdown("**Terminal de progreso**")
     try:
         with open(ruta_log, encoding="utf-8") as f:
@@ -220,7 +220,7 @@ def _panel_en_curso():
     except Exception:
         st.code("Iniciando...", language="text")
 
-    # Resultado disponible en la cola?
+    # resultado disponible en la cola?
     resultado = None
     if cola is not None:
         try:
@@ -228,7 +228,7 @@ def _panel_en_curso():
         except Exception:
             resultado = None
 
-    # Si el proceso ya murio y aun no hay resultado, dar un instante por si llega
+    # si el proceso ya murio y aun no hay resultado, dar un instante por si llega
     if resultado is None and proc is not None and not proc.is_alive():
         try:
             resultado = cola.get(timeout=1)
@@ -246,7 +246,7 @@ def _panel_en_curso():
             st.session_state["video_agente"] = resultado.get("video")
         else:
             st.session_state["error_auditoria"] = resultado.get("error", "desconocido")
-        # Si se dejo el navegador abierto, el worker sigue vivo manteniendolo Se
+        # si se dejo el navegador abierto, el worker sigue vivo manteniendolo se
         # conserva su handle para poder cerrarlo al iniciar otra auditoria/detener
         cfg_ag = (st.session_state.get("config_auditoria", {}) or {}).get("agente_ia", {})
         if cfg_ag.get("mantener_navegador_abierto") and proc is not None and proc.is_alive():
@@ -258,7 +258,7 @@ def _panel_en_curso():
 st.title("Herramienta de Auditoria de Seguridad Web")
 st.caption("Analisis segun OWASP Top 10")
 
-# Barra lateral: configuracion
+# barra lateral: configuracion
 with st.sidebar:
     st.header("Configuracion")
 
@@ -293,7 +293,7 @@ with st.sidebar:
     default_zap = "/usr/local/bin/zap.sh" if os.path.exists("/usr/local/bin/zap.sh") else os.path.expanduser("~/proyectos/ZAP_2.17.0/zap.sh")
     ruta_zap = st.text_input("Ruta a zap.sh (si usas ZAP)", value=default_zap)
 
-    # Configuracion del agente de IA (modelo LOCAL via Ollama)
+    # configuracion del agente de IA (modelo local via ollama)
     modelo_ollama = "jonathanFS/pentest-owasp"
     host_ollama = "http://localhost:11434"
     usar_navegador = True
@@ -347,7 +347,7 @@ with st.sidebar:
                        use_container_width=True,
                        disabled=(not autorizado or st.session_state.auditoria_en_curso))
 
-    # Boton de DETENER: solo visible mientras hay una auditoria en curso, en rojo
+    # boton de detener: solo visible mientras hay una auditoria en curso, en rojo
     if st.session_state.get("auditoria_en_curso"):
         st.markdown(
             "<style>"
@@ -362,7 +362,7 @@ with st.sidebar:
             _detener_auditoria()
             st.rerun()
 
-# Zona principal
+# zona principal
 if not url:
     st.info("Introduce una URL objetivo en la barra lateral para comenzar.")
     st.stop()
@@ -375,7 +375,7 @@ if lanzar:
         st.error("Debes confirmar la autorizacion para auditar.")
         st.stop()
 
-    # Se arma la config y se guarda el proceso de auditoria se lanza en la
+    # se arma la config y se guarda el proceso de auditoria se lanza en la
     # siguiente pasada (bloque "en curso"), en un proceso aparte cancelable
     st.session_state.config_auditoria = {
         "objetivo": {"url": url, "nombre": nombre, "autorizacion_confirmada": True},
@@ -400,14 +400,14 @@ if lanzar:
             "contrasena": cred_contrasena,
             "limite_acciones": limite_acciones_agente,
             "timeout_sesion_seg": timeout_agente,
-            # Dejar el navegador abierto al terminar (solo tiene sentido si es visible)
+            # dejar el navegador abierto al terminar (solo tiene sentido si es visible)
             "mantener_navegador_abierto": bool(
                 modulos_activos.get("agente_ia") and usar_navegador and abrir_ventana),
         },
     }
     st.session_state.mostrar_monitor = bool(
         modulos_activos.get("agente_ia") and usar_navegador and abrir_ventana)
-    # Limpiar resultados/errores de la auditoria anterior para que no queden
+    # limpiar resultados/errores de la auditoria anterior para que no queden
     # visibles al arrancar una nueva
     for k in ("datos_reporte", "rutas_informe", "video_agente", "error_auditoria"):
         st.session_state.pop(k, None)
@@ -415,31 +415,31 @@ if lanzar:
     st.rerun()
 
 if st.session_state.get("auditoria_en_curso", False):
-    # Primera pasada: lanzar el proceso de auditoria en segundo plano
+    # primera pasada: lanzar el proceso de auditoria en segundo plano
     if st.session_state.get("proc") is None:
         _lanzar_auditoria_en_proceso(
             st.session_state.get("config_auditoria", {}),
             st.session_state.get("mostrar_monitor", False))
 
-    # Panel de progreso + terminal en vivo (arriba)
+    # panel de progreso + terminal en vivo (arriba)
     _panel_en_curso()
 
-    # Monitor en Vivo (debajo, como estaba) Va FUERA del fragmento auto refrescante
-    # para que el iframe de noVNC no se recargue en cada actualizacion del progreso
+    # monitor en vivo (debajo, como estaba) va fuera del fragmento auto refrescante
+    # para que el iframe de novnc no se recargue en cada actualizacion del progreso
     if st.session_state.get("mostrar_monitor"):
         _render_monitor(expanded=True)
 
-# Tras terminar la auditoria, mantener el Monitor en Vivo disponible (plegable):
+# tras terminar la auditoria, mantener el monitor en vivo disponible (plegable):
 # no debe desaparecer al finalizar el usuario decide si ocultarlo
 elif st.session_state.get("mostrar_monitor"):
     _render_monitor(expanded=True)
 
 
-# Aviso si la ultima auditoria fue detenida o fallo
+# aviso si la ultima auditoria fue detenida o fallo
 if st.session_state.get("error_auditoria") and not st.session_state.get("auditoria_en_curso"):
     st.warning(st.session_state["error_auditoria"])
 
-# Mostrar resultados (si existen y no hay una auditoria en curso)
+# mostrar resultados (si existen y no hay una auditoria en curso)
 if "datos_reporte" in st.session_state and not st.session_state.get("auditoria_en_curso"):
     datos = st.session_state["datos_reporte"]
     meta = datos["metadatos"]
@@ -469,7 +469,7 @@ if "datos_reporte" in st.session_state and not st.session_state.get("auditoria_e
             f"</div>", unsafe_allow_html=True)
         st.write(valoracion.get("descripcion", ""))
 
-    # Video del agente (si existe)
+    # video del agente (si existe)
     video_agente = st.session_state.get("video_agente")
     if video_agente and os.path.isfile(video_agente):
         with st.expander("Ver Grabacion de la Sesion del Agente", expanded=False):

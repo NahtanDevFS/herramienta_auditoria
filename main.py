@@ -1,14 +1,12 @@
 # main py
-# Punto de entrada por linea de comandos de la herramienta de auditoria
-# 
-# Se encarga de:
-# 1 Leer la configuracion (config yaml)
-# 2 Verificar que exista autorizacion para auditar (salvaguarda etica/legal)
-# 3 Preparar el sistema de logging
-# 4 Delegar la ejecucion a auditoria ejecutar_auditoria()
-# 5 Guardar el reporte y generar el informe HTML/PDF
-# 
-# Uso:
+# punto de entrada por linea de comandos de la herramienta de auditoria
+# se encarga de:
+# 1 leer la configuracion (config yaml)
+# 2 verificar que exista autorizacion para auditar (salvaguarda etica/legal)
+# 3 preparar el sistema de logging
+# 4 delegar la ejecucion a auditoria ejecutar_auditoria()
+# 5 guardar el reporte y generar el informe HTML/PDF
+# uso:
 # python3 main py
 # python3 main py config otra_config yaml
 
@@ -22,7 +20,7 @@ from auditoria import ejecutar_auditoria
 
 
 def cargar_config(ruta: str) -> dict:
-    # Lee config yaml y lo devuelve como diccionario
+    # lee config yaml y lo devuelve como diccionario
     try:
         with open(ruta, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
@@ -42,7 +40,7 @@ def cargar_config(ruta: str) -> dict:
 
 
 def validar_config(config: dict) -> None:
-    # Comprueba que la configuracion tenga lo minimo necesario para operar
+    # comprueba que la configuracion tenga lo minimo necesario para operar
     # y que se cumplan las salvaguardas antes de tocar el objetivo
     objetivo = config.get("objetivo", {})
     url = objetivo.get("url", "").strip()
@@ -56,7 +54,7 @@ def validar_config(config: dict) -> None:
         print(f"[ERROR] La URL debe empezar por http:// o https:// -> {url}")
         sys.exit(1)
 
-    # SALVAGUARDA: debe confirmarse la autorizacion Sin esto, no se ejecuta
+    # salvaguarda: debe confirmarse la autorizacion sin esto, no se ejecuta
     if not objetivo.get("autorizacion_confirmada", False):
         print("[ERROR] Auditoria bloqueada: autorizacion no confirmada.")
         print("        Solo debes auditar objetivos que tengas permiso de auditar.")
@@ -67,7 +65,7 @@ def validar_config(config: dict) -> None:
 
 
 def configurar_logging(config: dict) -> logging.Logger:
-    # Prepara el logging (consola y, si se pide, archivo)
+    # prepara el logging (consola y, si se pide, archivo)
     registro = config.get("registro", {})
     nivel_txt = registro.get("nivel", "INFO").upper()
     nivel = getattr(logging, nivel_txt, logging.INFO)

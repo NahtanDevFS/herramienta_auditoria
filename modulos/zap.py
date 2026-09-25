@@ -1,5 +1,6 @@
-# zap py Modulo de escaneo con OWASP ZAP (Daemon)
-# Integra ZAP mediante su API HTTP: levanta el daemon, ejecuta spider/active scan, recolecta alertas y lo apaga de forma segura
+# ZAP py modulo de escaneo con OWASP ZAP (daemon)
+# integra ZAP mediante su API HTTP: levanta el daemon, ejecuta spider/active scan, recolecta alertas y lo apaga de forma
+# segura
 
 import logging
 import os
@@ -11,18 +12,18 @@ from core.modelo_hallazgo import Hallazgo, Severidad
 
 ORIGEN = "modulo_zap"
 
-# Puerto en el que levantaremos el daemon de ZAP (su API)
+# puerto en el que levantaremos el daemon de ZAP (su API)
 PUERTO_ZAP = 8090
 
 # API key fija para hablar con nuestro propio ZAP local
 API_KEY = "auditoria-web-zap-key"
 
-# Timeouts (segundos)
+# timeouts (segundos)
 TIMEOUT_ARRANQUE = 120     # esperar a que el daemon arranque
 TIMEOUT_SPIDER = 300       # esperar a que el spider termine
 TIMEOUT_ASCAN = 900        # esperar a que el active scan termine (15 min)
 
-# Mapeo del riesgo de ZAP a nuestra escala de severidad
+# mapeo del riesgo de ZAP a nuestra escala de severidad
 MAPA_RIESGO = {
     "High": Severidad.ALTA,
     "Medium": Severidad.MEDIA,
@@ -30,7 +31,7 @@ MAPA_RIESGO = {
     "Informational": Severidad.INFORMATIVA,
 }
 
-# Mapeo aproximado de tipos de alerta de ZAP a categoria OWASP, por palabras
+# mapeo aproximado de tipos de alerta de ZAP a categoria OWASP, por palabras
 # clave en el nombre de la alerta
 def _categoria_desde_alerta(nombre: str) -> str:
     n = nombre.lower()
@@ -53,15 +54,15 @@ def _categoria_desde_alerta(nombre: str) -> str:
         return "A04"
     if any(k in n for k in ["outdated", "vulnerable js", "version"]):
         return "A03"
-    # Por defecto, la mayoria de alertas de ZAP son de mala configuracion
+    # por defecto, la mayoria de alertas de ZAP son de mala configuracion
     return "A02"
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    # Punto de entrada Levanta ZAP, escanea, convierte alertas en Hallazgos y asegura su apagado final
+    # punto de entrada levanta ZAP, escanea, convierte alertas en hallazgos y asegura su apagado final
     objetivo = config["objetivo"]["url"].strip()
     conf_zap = config.get("zap", {})
-    ruta_zap = conf_zap.get("ruta")  # ruta a zap sh (obligatoria)
+    ruta_zap = conf_zap.get("ruta")  # ruta a ZAP sh (obligatoria)
     puerto = conf_zap.get("puerto", PUERTO_ZAP)
     timeout_ascan = conf_zap.get("timeout_ascan", TIMEOUT_ASCAN)
     timeout_spider = conf_zap.get("timeout_spider", TIMEOUT_SPIDER)
@@ -69,7 +70,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
     hallazgos: list[Hallazgo] = []
 
-    # Verificar que tenemos la ruta a zap sh
+    # verificar que tenemos la ruta a ZAP sh
     if not ruta_zap:
         logger.error(
             "[zap] No se ha definido la ruta a zap.sh en config.yaml "
@@ -82,7 +83,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         logger.error(f"[zap] No se encontro zap.sh en: {ruta_zap}. Se omite.")
         return hallazgos
 
-    # Verificar la libreria
+    # verificar la libreria
     try:
         from zapv2 import ZAPv2
     except ImportError:
@@ -94,13 +95,13 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
     proceso_zap = None
     try:
-        # Paso 1: lanzar el daemon de ZAP
+        # paso 1: lanzar el daemon de ZAP
         logger.info(f"[zap] Lanzando ZAP en modo daemon (puerto {puerto})...")
         proceso_zap = _lanzar_daemon(ruta_zap, puerto, logger)
         if proceso_zap is None:
             return hallazgos
 
-        # Paso 2: conectar a la API y esperar a que arranque
+        # paso 2: conectar a la API y esperar a que arranque
         zap = ZAPv2(
             apikey=API_KEY,
             proxies={
@@ -112,15 +113,15 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
             logger.error("[zap] ZAP no arranco a tiempo. Se omite el modulo.")
             return hallazgos
 
-        # Paso 3: acceder a la URL objetivo
+        # paso 3: acceder a la URL objetivo
         logger.info(f"[zap] Accediendo al objetivo: {objetivo}")
         zap.core.access_url(objetivo)
         time.sleep(2)
 
-        # Paso 4: Spider (descubrir URLs)
+        # paso 4: spider (descubrir urls)
         _ejecutar_spider(zap, objetivo, timeout_spider, logger)
 
-        # Paso 5: Active Scan (atacar)
+        # paso 5: active scan (atacar)
         if active_scan:
             _ejecutar_active_scan(zap, objetivo, timeout_ascan, logger)
         else:
@@ -130,13 +131,13 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
             )
             time.sleep(5)  # dar tiempo al escaneo pasivo
 
-        # Paso 6: recoger alertas
+        # paso 6: recoger alertas
         hallazgos = _recoger_alertas(zap, objetivo, logger)
 
     except Exception as e:
         logger.error(f"[zap] Error durante el escaneo con ZAP: {e}")
     finally:
-        # Paso 7: apagar ZAP SIEMPRE
+        # paso 7: apagar ZAP siempre
         _apagar_daemon(proceso_zap, logger)
 
     logger.info(f"[zap] Analisis terminado. {len(hallazgos)} hallazgo(s).")
@@ -144,16 +145,16 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 
 def _lanzar_daemon(ruta_zap, puerto, logger):
-    # Lanza ZAP en modo daemon como subproceso Devuelve el proceso o None
+    # lanza ZAP en modo daemon como subproceso devuelve el proceso o none
     comando = [
         ruta_zap,
         "-daemon",                       # modo sin interfaz
         "-host", "127.0.0.1",
         "-port", str(puerto),
         "-config", f"api.key={API_KEY}",
-        # Permitir peticiones de la API con cualquier host header La libreria
-        # zapv2 envia las peticiones a 'http://zap/ ', y ZAP 2 17 las rechaza
-        # por defecto ('host header zap not permitted') Estas dos lineas le
+        # permitir peticiones de la API con cualquier host header la libreria
+        # zapv2 envia las peticiones a 'HTTP://ZAP/ ', y ZAP 2 17 las rechaza
+        # por defecto ('host header ZAP not permitted') estas dos lineas le
         # dicen a ZAP que acepte esas peticiones
         "-config", "api.addrs.addr.name=.*",
         "-config", "api.addrs.addr.regex=true",
@@ -171,7 +172,7 @@ def _lanzar_daemon(ruta_zap, puerto, logger):
 
 
 def _esperar_arranque(zap, logger) -> bool:
-    # Sondea la API de ZAP hasta que responda o expire el timeout
+    # sondea la API de ZAP hasta que responda o expire el timeout
     logger.info("[zap] Esperando a que ZAP arranque (puede tardar ~30-40 s)...")
     inicio = time.time()
     ultimo_error = None
@@ -183,7 +184,7 @@ def _esperar_arranque(zap, logger) -> bool:
         except Exception as e:
             ultimo_error = e
             time.sleep(3)
-    # Si llegamos aqui, no arranco Damos pistas del ultimo error
+    # si llegamos aqui, no arranco damos pistas del ultimo error
     logger.error(
         f"[zap] ZAP no respondio a la API a tiempo. Ultimo error: {ultimo_error}"
     )
@@ -191,7 +192,7 @@ def _esperar_arranque(zap, logger) -> bool:
 
 
 def _ejecutar_spider(zap, objetivo, timeout, logger):
-    # Lanza el spider (descubrimiento de URLs) y espera a que termine
+    # lanza el spider (descubrimiento de urls) y espera a que termine
     logger.info("[zap] Iniciando spider (descubrimiento de URLs)...")
     scan_id = zap.spider.scan(objetivo)
     time.sleep(2)
@@ -215,7 +216,7 @@ def _ejecutar_spider(zap, objetivo, timeout, logger):
 
 
 def _ejecutar_active_scan(zap, objetivo, timeout, logger):
-    # Lanza el active scan y espera a que termine
+    # lanza el active scan y espera a que termine
     logger.info(
         "[zap] Iniciando active scan (ataque activo). Esto puede tardar "
         "bastante (hasta 15 min)..."
@@ -244,7 +245,7 @@ def _ejecutar_active_scan(zap, objetivo, timeout, logger):
 
 
 def _recoger_alertas(zap, objetivo, logger) -> list[Hallazgo]:
-    # Convierte las alertas de ZAP en objetos Hallazgo, agrupando duplicados
+    # convierte las alertas de ZAP en objetos hallazgo, agrupando duplicados
     hallazgos: list[Hallazgo] = []
     try:
         alertas = zap.core.alerts(baseurl=objetivo)
@@ -252,7 +253,7 @@ def _recoger_alertas(zap, objetivo, logger) -> list[Hallazgo]:
         logger.error(f"[zap] No se pudieron recoger las alertas: {e}")
         return hallazgos
 
-    # ZAP suele repetir la misma alerta en muchas URLs Agrupamos por
+    # ZAP suele repetir la misma alerta en muchas urls agrupamos por
     # (nombre, riesgo) para no inundar el reporte con duplicados
     vistos = set()
 
@@ -272,7 +273,7 @@ def _recoger_alertas(zap, objetivo, logger) -> list[Hallazgo]:
         descripcion = (alerta.get("description", "") or "").strip()
         if not descripcion:
             descripcion = f"Alerta detectada por ZAP: {nombre}."
-        # Truncar descripciones muy largas
+        # truncar descripciones muy largas
         if len(descripcion) > 500:
             descripcion = descripcion[:500].rsplit(" ", 1)[0] + " [...]"
 
@@ -282,8 +283,8 @@ def _recoger_alertas(zap, objetivo, logger) -> list[Hallazgo]:
         if not solucion:
             solucion = "Revisar la alerta y aplicar la correccion recomendada."
 
-        # CVSS: ZAP no siempre lo da usamos None y dejamos que el motor de
-        # riesgo (Fase 5) lo estime por severidad si hace falta
+        # CVSS: ZAP no siempre lo da usamos none y dejamos que el motor de
+        # riesgo (fase 5) lo estime por severidad si hace falta
         parametro = alerta.get("param", "")
         evidencia_zap = alerta.get("evidence", "")
         evidencia = f"URL: {url_alerta}"
@@ -312,7 +313,7 @@ def _recoger_alertas(zap, objetivo, logger) -> list[Hallazgo]:
 
 
 def _apagar_daemon(proceso_zap, logger):
-    # Apaga el daemon de ZAP de forma limpia o lo fuerza si no responde
+    # apaga el daemon de ZAP de forma limpia o lo fuerza si no responde
     if proceso_zap is None:
         return
     logger.info("[zap] Apagando ZAP...")
@@ -326,9 +327,9 @@ def _apagar_daemon(proceso_zap, logger):
         logger.warning(f"[zap] Problema al apagar ZAP: {e}")
 
 
-# Prueba independiente:
-# python3 m modulos zap
-# Requiere ZAP instalado y la ruta correcta a zap sh
+# prueba independiente:
+# python3 m modulos ZAP
+# requiere ZAP instalado y la ruta correcta a ZAP sh
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")
@@ -337,7 +338,7 @@ if __name__ == "__main__":
         "objetivo": {"url": "http://scanme.nmap.org"},
         "opciones": {},
         "zap": {
-            # AJUSTA esta ruta a la de mi instalacion:
+            # ajusta esta ruta a la de mi instalacion:
             "ruta": os.path.expanduser("~/proyectos/ZAP_2.17.0/zap.sh"),
             "active_scan": True,
             "timeout_ascan": 600,

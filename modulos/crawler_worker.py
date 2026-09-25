@@ -1,6 +1,6 @@
-# crawler_worker py Worker de rastreo con navegador (Subproceso aislado)
-# Playwright NO puede correr dentro del bucle de asyncio de Streamlit
-# Todo el rastreo visual se ejecuta aqui de forma aislada, lanzado por crawler py
+# crawler_worker py worker de rastreo con navegador (subproceso aislado)
+# playwright no puede correr dentro del bucle de asyncio de streamlit
+# todo el rastreo visual se ejecuta aqui de forma aislada, lanzado por crawler py
 
 import json
 import sys
@@ -71,14 +71,14 @@ def _descartar_overlays(page):
 
 
 def _ruta_spa(url):
-    # Identidad de una vista: en SPAs es el fragmento (#/login) si no, el path
+    # identidad de una vista: en spas es el fragmento (#/login) si no, el path
     p = urlparse(url)
     return p.fragment or p.path or "/"
 
 
 def _iniciar_sesion(page, objetivo, usuario, contrasena):
-    # Inicia sesion antes de rastrear, para poder ver la zona privada (rutas
-    # reales que el login no enlaza) Prueba el objetivo y rutas de login comunes
+    # inicia sesion antes de rastrear, para poder ver la zona privada (rutas
+    # reales que el login no enlaza) prueba el objetivo y rutas de login comunes
     origen = _origen(objetivo)
     candidatos = [objetivo] + [origen + r for r in
                                ("/login", "/signin", "/admin", "/#/login")]
@@ -118,8 +118,8 @@ def _iniciar_sesion(page, objetivo, usuario, contrasena):
 
 
 def _compactar_mapa(mapa, maximo=15):
-    # Deduplica por RUTA de SPA (no por URL completa) y prioriza login/busqueda
-    # Asi /login, /admin#/login y /administrator#/login (misma vista) cuentan una vez
+    # deduplica por ruta de spa (no por URL completa) y prioriza login/busqueda
+    # asi /login, /admin#/login y /administrator#/login (misma vista) cuentan una vez
     vistos, salida = set(), []
     for e in sorted(mapa, key=lambda x: (not x["tiene_login"], not x["tiene_busqueda"],
                                          not x.get("tiene_formulario", False))):
@@ -139,7 +139,7 @@ def rastrear(objetivo, max_paginas, max_prof, usuario=None, contrasena=None):
     dominio = urlparse(objetivo).netloc
     visitadas, rutas, urls_param = set(), set(), set()
     formularios, firmas, mapa = [], set(), []
-    endpoints_api = set()   # endpoints REST detectados escuchando la red
+    endpoints_api = set()   # endpoints rest detectados escuchando la red
 
     origen = _origen(objetivo)
     cola = deque([(objetivo, 0)])
@@ -154,8 +154,8 @@ def rastrear(objetivo, max_paginas, max_prof, usuario=None, contrasena=None):
     page = ctx.new_page()
     page.set_default_timeout(8000)
 
-    # Escuchar el trafico: la SPA llama a su API por detras (fetch/XHR) Capturamos
-    # esas URLs, que no aparecen como enlaces normales Es la forma fiable de
+    # escuchar el trafico: la spa llama a su API por detras (fetch/xhr) capturamos
+    # esas urls, que no aparecen como enlaces normales es la forma fiable de
     # descubrir la superficie de API sin adivinar rutas
     def _capturar_peticion(req):
         try:
@@ -171,7 +171,7 @@ def rastrear(objetivo, max_paginas, max_prof, usuario=None, contrasena=None):
 
     page.on("request", _capturar_peticion)
 
-    # Si hay credenciales, iniciar sesion ANTES de rastrear: asi el DOM ya
+    # si hay credenciales, iniciar sesion antes de rastrear: asi el dom ya
     # autenticado enlaza a las rutas reales de la zona privada
     if usuario and contrasena:
         try:
@@ -221,7 +221,7 @@ def rastrear(objetivo, max_paginas, max_prof, usuario=None, contrasena=None):
                 if f.get("tiene_password"):
                     hay_login = True
                 elif any(c.get("tipo") in TEXTO for c in f.get("campos", [])):
-                    # Formulario de datos sin password: contacto, feedback, perfil
+                    # formulario de datos sin password: contacto, feedback, perfil
                     hay_formulario = True
                 firma = (_ruta_spa(url_real),
                          tuple(c["nombre"] for c in f.get("campos", [])))
@@ -233,8 +233,8 @@ def rastrear(objetivo, max_paginas, max_prof, usuario=None, contrasena=None):
                     })
             hay_busqueda = info.get("buscadores", 0) > 0
 
-            # Si hay un buscador, hacemos una busqueda de prueba para DISPARAR la
-            # llamada a la API de busqueda (asi el listener la captura) Es donde
+            # si hay un buscador, hacemos una busqueda de prueba para disparar la
+            # llamada a la API de busqueda (asi el listener la captura) es donde
             # suelen vivir inyecciones, y no se captura si nadie busca
             if hay_busqueda:
                 try:
@@ -297,7 +297,7 @@ def main():
         with open(salida, "w", encoding="utf-8") as f:
             json.dump(resultado, f, ensure_ascii=False)
     except Exception as e:
-        # Escribir el error para que el proceso padre sepa que fallo
+        # escribir el error para que el proceso padre sepa que fallo
         with open(salida, "w", encoding="utf-8") as f:
             json.dump({"error": str(e)}, f, ensure_ascii=False)
         sys.exit(1)

@@ -1,18 +1,18 @@
-# reporte py Consolida todos los hallazgos de la auditoria y los guarda
-# En esta fase genera un reporte en JSON con metadatos, resumen y lista de hallazgos
-# Reutilizable para la posterior generacion de reportes HTML y PDF
+# reporte py consolida todos los hallazgos de la auditoria y los guarda
+# en esta fase genera un reporte en JSON con metadatos, resumen y lista de hallazgos
+# reutilizable para la posterior generacion de reportes HTML y PDF
 
 import json
 import os
 from datetime import datetime
 
-# Importamos las clases del modelo El punto ( ) indica "del mismo paquete core"
-# Si ejecutas este archivo directamente, mira el bloque __main__ al final
+# importamos las clases del modelo el punto ( ) indica "del mismo paquete core"
+# si ejecutas este archivo directamente, mira el bloque __main__ al final
 from core.modelo_hallazgo import Hallazgo, Severidad
 
 
-# Orden de severidad de mas grave a menos grave
-# Sirve para ordenar los hallazgos en el reporte: primero lo critico
+# orden de severidad de mas grave a menos grave
+# sirve para ordenar los hallazgos en el reporte: primero lo critico
 ORDEN_SEVERIDAD = {
     Severidad.CRITICA: 0,
     Severidad.ALTA: 1,
@@ -23,11 +23,11 @@ ORDEN_SEVERIDAD = {
 
 
 class Reporte:
-    # Acumula hallazgos durante la auditoria y los exporta al final
+    # acumula hallazgos durante la auditoria y los exporta al final
 
     def __init__(self, objetivo: str, nombre: str = ""):
         # objetivo : URL de la web auditada
-        # nombre : Nombre descriptivo del objetivo (para el reporte)
+        # nombre : nombre descriptivo del objetivo (para el reporte)
         self.objetivo = objetivo
         self.nombre = nombre
         self.hallazgos: list[Hallazgo] = []
@@ -37,15 +37,15 @@ class Reporte:
         self.resumen_agente = None
 
     def set_analisis_riesgo(self, analisis: dict) -> None:
-        # Guarda el analisis de riesgos (de la Fase 5) para incluirlo en el reporte
+        # guarda el analisis de riesgos (de la fase 5) para incluirlo en el reporte
         self.analisis_riesgo = analisis
 
     def set_resumen_agente(self, resumen: dict) -> None:
-        # Guarda el resumen de cierre del agente de IA (bitacora + narrativa)
+        # guarda el resumen de cierre del agente de IA (bitacora + narrativa)
         self.resumen_agente = resumen
 
     def agregar(self, hallazgo: Hallazgo) -> None:
-        # Añade un unico hallazgo al reporte
+        # añade un unico hallazgo al reporte
         if not isinstance(hallazgo, Hallazgo):
             raise TypeError(
                 f"Se esperaba un objeto Hallazgo, se recibio: {type(hallazgo)}"
@@ -53,18 +53,18 @@ class Reporte:
         self.hallazgos.append(hallazgo)
 
     def agregar_varios(self, hallazgos: list[Hallazgo]) -> None:
-        # Añade una lista de hallazgos de golpe (lo que devuelve un modulo)
+        # añade una lista de hallazgos de golpe (lo que devuelve un modulo)
         for h in hallazgos:
             self.agregar(h)
 
     def finalizar(self) -> None:
-        # Marca el fin de la auditoria (para calcular la duracion)
+        # marca el fin de la auditoria (para calcular la duracion)
         self.fin = datetime.now()
 
     def _resumen_por_severidad(self) -> dict:
-        # Cuenta cuantos hallazgos hay de cada severidad
-        # Devuelve algo como: {"critica": 1, "alta": 3, "media": 0, }
-        # Arrancamos el conteo en 0 para todas las severidades, para que
+        # cuenta cuantos hallazgos hay de cada severidad
+        # devuelve algo como: {"critica": 1, "alta": 3, "media": 0, }
+        # arrancamos el conteo en 0 para todas las severidades, para que
         # siempre aparezcan todas en el reporte aunque sean cero
         conteo = {sev.value: 0 for sev in Severidad}
         for h in self.hallazgos:
@@ -72,16 +72,16 @@ class Reporte:
         return conteo
 
     def _hallazgos_ordenados(self) -> list[Hallazgo]:
-        # Devuelve los hallazgos ordenados de mas grave a menos grave
+        # devuelve los hallazgos ordenados de mas grave a menos grave
         return sorted(
             self.hallazgos,
             key=lambda h: ORDEN_SEVERIDAD[h.severidad],
         )
 
     def construir(self) -> dict:
-        # Arma el diccionario completo del reporte, listo para volcar a JSON
-        # Esta es la estructura central que luego consumira el reporte HTML/PDF
-        # Si no se llamo a finalizar(), lo hacemos ahora para tener una duracion
+        # arma el diccionario completo del reporte, listo para volcar a JSON
+        # esta es la estructura central que luego consumira el reporte HTML/PDF
+        # si no se llamo a finalizar(), lo hacemos ahora para tener una duracion
         if self.fin is None:
             self.finalizar()
 
@@ -100,37 +100,37 @@ class Reporte:
             "hallazgos": [h.to_dict() for h in self._hallazgos_ordenados()],
         }
 
-        # Añadir el analisis de riesgo si existe (Fase 5)
+        # añadir el analisis de riesgo si existe (fase 5)
         if self.analisis_riesgo:
             datos["analisis_riesgo"] = self.analisis_riesgo
 
-        # Añadir el resumen de cierre del agente de IA si existe
+        # añadir el resumen de cierre del agente de IA si existe
         if self.resumen_agente:
             datos["resumen_agente"] = self.resumen_agente
 
         return datos
 
     def guardar_json(self, carpeta: str = "resultados") -> str:
-        # Guarda el reporte como archivo JSON dentro de la carpeta indicada
-        # El nombre del archivo incluye la fecha y hora Devuelve la ruta
-        # Crea la carpeta si no existe (exist_ok evita error si ya existe)
+        # guarda el reporte como archivo JSON dentro de la carpeta indicada
+        # el nombre del archivo incluye la fecha y hora devuelve la ruta
+        # crea la carpeta si no existe (exist_ok evita error si ya existe)
         os.makedirs(carpeta, exist_ok=True)
 
-        # Nombre unico basado en la fecha: reporte_2026 07 16_0130 json
+        # nombre unico basado en la fecha: reporte_2026 07 16_0130 JSON
         marca = self.inicio.strftime("%Y-%m-%d_%H%M%S")
         nombre_archivo = f"reporte_{marca}.json"
         ruta = os.path.join(carpeta, nombre_archivo)
 
         datos = self.construir()
 
-        # ensure_ascii=False para tildes indent=2 para formateo legible
+        # ensure_ascii=false para tildes indent=2 para formateo legible
         with open(ruta, "w", encoding="utf-8") as f:
             json.dump(datos, f, ensure_ascii=False, indent=2)
 
         return ruta
 
     def imprimir_resumen(self) -> None:
-        # Muestra un resumen rapido por consola al terminar la auditoria
+        # muestra un resumen rapido por consola al terminar la auditoria
         datos = self.construir()
         meta = datos["metadatos"]
         resumen = datos["resumen_por_severidad"]
@@ -147,8 +147,8 @@ class Reporte:
         print("=" * 55)
 
 
-# Bloque de prueba: solo corre si ejecutas este archivo directamente
-# Crea unos hallazgos de ejemplo, arma el reporte y lo guarda
+# bloque de prueba: solo corre si ejecutas este archivo directamente
+# crea unos hallazgos de ejemplo, arma el reporte y lo guarda
 if __name__ == "__main__":
     print("Probando el modulo de reporte...\n")
 
@@ -157,7 +157,7 @@ if __name__ == "__main__":
         nombre="Prueba de reporte",
     )
 
-    # Creamos unos hallazgos de ejemplo (desordenados a proposito, para
+    # creamos unos hallazgos de ejemplo (desordenados a proposito, para
     # comprobar que el reporte los ordena por severidad)
     rep.agregar(Hallazgo(
         titulo="Cabecera CSP ausente",

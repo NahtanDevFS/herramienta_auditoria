@@ -1,6 +1,6 @@
-# ventana_pensamiento py Ventana flotante (Tkinter) del hilo de pensamiento del agente
-# Corre en un subproceso y lee eventos en tiempo real para mostrar razonamientos
-# Uso interno: lanzado por EmisorPensamiento
+# ventana_pensamiento py ventana flotante (tkinter) del hilo de pensamiento del agente
+# corre en un subproceso y lee eventos en tiempo real para mostrar razonamientos
+# uso interno: lanzado por emisorpensamiento
 
 import json
 import os
@@ -16,13 +16,13 @@ def _main_ventana(archivo):
 
     root = tk.Tk()
     root.title("Razonamiento del agente")
-    # Quitamos la decoracion (barra de titulo/bordes) directamente desde Tk en vez
+    # quitamos la decoracion (barra de titulo/bordes) directamente desde tk en vez
     # de depender de la regla de fluxbox (~/ fluxbox/apps), que no matchea de forma
-    # fiable la clase de la ventana Tk Asi la ventana ocupa exactamente su
+    # fiable la clase de la ventana tk asi la ventana ocupa exactamente su
     # geometria y no se sale de la pantalla
     root.overrideredirect(True)
-    # Posicion calculada desde el ancho REAL de la pantalla (no valores fijos), para
-    # que la ventana quede pegada a la derecha pero SIEMPRE dentro del area visible,
+    # posicion calculada desde el ancho real de la pantalla (no valores fijos), para
+    # que la ventana quede pegada a la derecha pero siempre dentro del area visible,
     # con margen, sin desbordarse (aunque cambie la resolucion del escritorio)
     root.update_idletasks()
     sw = root.winfo_screenwidth()
@@ -38,8 +38,8 @@ def _main_ventana(archivo):
     tk.Label(root, text="Razonamiento del agente en vivo", bg="#0d1117",
              fg="#58a6ff", font=("Segoe UI", 15, "bold")).pack(pady=10)
 
-    # wrap=CHAR asegura que URLs y payloads largos sin espacios (p ej
-    # http://host docker internal:5173/admin) tambien se ajusten al ancho y no
+    # wrap=char asegura que urls y payloads largos sin espacios (p ej
+    # HTTP://host docker internal:5173/admin) tambien se ajusten al ancho y no
     # se desborden horizontalmente
     txt = scrolledtext.ScrolledText(root, bg="#0d1117", fg="#c9d1d9",
                                     font=("Consolas", 12), wrap=tk.CHAR,
@@ -85,7 +85,7 @@ def _main_ventana(archivo):
 
 
 class EmisorPensamiento:
-    # Lanza la ventana en un subproceso y le envia eventos escribiendo en un archivo
+    # lanza la ventana en un subproceso y le envia eventos escribiendo en un archivo
 
     def __init__(self, activo=True, logger=None):
         self.activo = bool(activo)
@@ -124,7 +124,7 @@ class EmisorPensamiento:
             pass
 
     def cerrar(self):
-        # Deja la ventana ABIERTA para lectura el usuario la cierra al final
+        # deja la ventana abierta para lectura el usuario la cierra al final
         self.emitir("fin", "")
         try:
             if self._f:

@@ -1,5 +1,5 @@
-# riesgo py — Motor de analisis de riesgos
-# Toma la lista de hallazgos y produce: normalizacion de CVSS, matriz de
+# riesgo py — motor de analisis de riesgos
+# toma la lista de hallazgos y produce: normalizacion de CVSS, matriz de
 # riesgo (probabilidad x impacto) y metricas agregadas
 
 from core.modelo_hallazgo import Hallazgo, Severidad
@@ -21,18 +21,18 @@ IMPACTO_POR_SEVERIDAD = {
     Severidad.INFORMATIVA: 1,
 }
 
-# Probabilidad de explotacion tipica por categoria OWASP Top 10:2025 (1 5)
+# probabilidad de explotacion tipica por categoria OWASP top 10:2025 (1 5)
 PROBABILIDAD_POR_CATEGORIA = {
-    "A01": 4,  # Broken Access Control (incluye SSRF)
-    "A02": 4,  # Security Misconfiguration
-    "A03": 4,  # Software Supply Chain Failures
-    "A04": 2,  # Cryptographic Failures
-    "A05": 5,  # Injection
-    "A06": 2,  # Insecure Design
-    "A07": 3,  # Authentication Failures
-    "A08": 2,  # Software or Data Integrity Failures
-    "A09": 1,  # Security Logging and Alerting Failures
-    "A10": 3,  # Mishandling of Exceptional Conditions
+    "A01": 4,  # broken access control (incluye ssrf)
+    "A02": 4,  # security misconfiguration
+    "A03": 4,  # software supply chain failures
+    "A04": 2,  # cryptographic failures
+    "A05": 5,  # injection
+    "A06": 2,  # insecure design
+    "A07": 3,  # authentication failures
+    "A08": 2,  # software or data integrity failures
+    "A09": 1,  # security logging and alerting failures
+    "A10": 3,  # mishandling of exceptional conditions
 }
 
 

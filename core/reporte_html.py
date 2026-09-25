@@ -1,7 +1,7 @@
-# reporte_html py Generador de reporte HTML/PDF (Fase 6)
-# Toma el reporte consolidado y produce un informe en HTML y PDF
-# Usa Jinja2 para la plantilla y WeasyPrint para convertir HTML a PDF
-# Se llama con: generar(datos_reporte, carpeta, formatos, logger)
+# reporte_html py generador de reporte HTML/PDF (fase 6)
+# toma el reporte consolidado y produce un informe en HTML y PDF
+# usa jinja2 para la plantilla y weasyprint para convertir HTML a PDF
+# se llama con: generar(datos_reporte, carpeta, formatos, logger)
 
 import logging
 import os
@@ -12,7 +12,7 @@ from jinja2 import Environment, select_autoescape
 env = Environment(autoescape=select_autoescape(['html', 'xml']))
 
 
-# Colores por severidad (se usan en el HTML/CSS)
+# colores por severidad (se usan en el HTML/css)
 COLOR_SEVERIDAD = {
     "critica": "#8B0000",
     "alta": "#D32F2F",
@@ -21,7 +21,7 @@ COLOR_SEVERIDAD = {
     "informativa": "#0288D1",
 }
 
-# Color de cada celda de la matriz segun su nivel de riesgo
+# color de cada celda de la matriz segun su nivel de riesgo
 COLOR_NIVEL = {
     "Critico": "#8B0000",
     "Alto": "#D32F2F",
@@ -31,8 +31,8 @@ COLOR_NIVEL = {
 }
 
 
-# Plantilla HTML del informe (Jinja2) El CSS esta embebido para que el
-# archivo sea autocontenido y WeasyPrint lo renderice bien a PDF
+# plantilla HTML del informe (jinja2) el css esta embebido para que el
+# archivo sea autocontenido y weasyprint lo renderice bien a PDF
 PLANTILLA = env.from_string(r"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -255,15 +255,15 @@ su valoracion y las lineas que quedarian pendientes.</p>
 
 
 def generar(datos: dict, carpeta: str, formatos: list, logger: logging.Logger) -> list:
-    # Genera el informe en los formatos pedidos
-    # datos : dict de Reporte construir() (metadatos, hallazgos, analisis_riesgo)
+    # genera el informe en los formatos pedidos
+    # datos : dict de reporte construir() (metadatos, hallazgos, analisis_riesgo)
     # carpeta : donde guardar los archivos
-    # formatos : lista con 'html' y/o 'pdf'
-    # Devuelve la lista de rutas de archivos generados
+    # formatos : lista con 'HTML' y/o 'PDF'
+    # devuelve la lista de rutas de archivos generados
     os.makedirs(carpeta, exist_ok=True)
     generados = []
 
-    # Preparar los datos para la plantilla
+    # preparar los datos para la plantilla
     contexto = _preparar_contexto(datos)
     html = PLANTILLA.render(**contexto)
 
@@ -296,7 +296,7 @@ def generar(datos: dict, carpeta: str, formatos: list, logger: logging.Logger) -
 
 
 def _preparar_contexto(datos: dict) -> dict:
-    # Transforma el dict del reporte en el contexto que espera la plantilla
+    # transforma el dict del reporte en el contexto que espera la plantilla
     meta = datos.get("metadatos", {})
     resumen_sev = datos.get("resumen_por_severidad", {})
     hallazgos = datos.get("hallazgos", [])
@@ -305,21 +305,21 @@ def _preparar_contexto(datos: dict) -> dict:
     valoracion = analisis.get("valoracion_global") if analisis else None
     matriz = analisis.get("matriz") if analisis else None
 
-    # Color del recuadro de valoracion global
+    # color del recuadro de valoracion global
     color_nivel_global = "#607D8B"
     if valoracion:
         color_nivel_global = COLOR_NIVEL.get(valoracion.get("nivel"), "#607D8B")
 
-    # Para escalar las barras del grafico de severidad
+    # para escalar las barras del grafico de severidad
     max_sev = max(resumen_sev.values()) if resumen_sev and any(resumen_sev.values()) else 1
 
-    # Agrupar hallazgos por categoria OWASP (ya vienen ordenados por severidad)
+    # agrupar hallazgos por categoria OWASP (ya vienen ordenados por severidad)
     hallazgos_por_categoria = {}
     for h in hallazgos:
         cat = h.get("categoria", "Sin categoria")
         hallazgos_por_categoria.setdefault(cat, []).append(h)
 
-    # Fecha legible
+    # fecha legible
     fecha_legible = meta.get("fecha_inicio", "")
     try:
         fecha_legible = datetime.fromisoformat(fecha_legible).strftime(
@@ -343,14 +343,14 @@ def _preparar_contexto(datos: dict) -> dict:
     }
 
 
-# Prueba independiente:
+# prueba independiente:
 # python3 m core reporte_html
-# Genera un informe de ejemplo con datos ficticios
+# genera un informe de ejemplo con datos ficticios
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")
 
-    # Datos de ejemplo simulando la salida de Reporte construir() + riesgo
+    # datos de ejemplo simulando la salida de reporte construir() + riesgo
     datos_ejemplo = {
         "metadatos": {
             "objetivo": "https://ejemplo.local",

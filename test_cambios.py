@@ -1,9 +1,9 @@
-# Test unitario para las funciones modificadas en agente_pentesting py
-# Verifica:
+# test unitario para las funciones modificadas en agente_pentesting py
+# verifica:
 # _construir_objetivos: modo normal vs autenticado
 # _seleccionar_endpoints_api: inyeccion de endpoints privados autenticados
 # _firma_hallazgo: deduplicacion
-# Heuristica A01: solo endpoints sensibles
+# heuristica a01: solo endpoints sensibles
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -31,7 +31,7 @@ assert "inyeccion_busqueda" in tipos_normal
 assert "inyeccion_formulario" in tipos_normal
 print(f"[OK] _construir_objetivos normal: {len(objs_normal)} objetivo(s), tipos: {tipos_normal}")
 
-# 2 _construir_objetivos: modo autenticado (NO debe sembrar login)
+# 2 _construir_objetivos: modo autenticado (no debe sembrar login)
 objs_auth = _construir_objetivos(mapa, rutas, autenticado=True,
                                   url_objetivo="http://localhost:3000")
 tipos_auth = {o["tipo"] for o in objs_auth}
@@ -51,7 +51,7 @@ eps_auth = _seleccionar_endpoints_api(
     eps_crawler, autenticado=True, url_objetivo="http://localhost:3000")
 assert len(eps_auth) > len(eps_normal), \
     f"Autenticado debe tener MAS endpoints ({len(eps_auth)} vs {len(eps_normal)})"
-# Verificar que se inyectaron endpoints privados conocidos
+# verificar que se inyectaron endpoints privados conocidos
 rutas_auth = [e.split("localhost:3000")[1] for e in eps_auth if "localhost:3000" in e]
 tiene_basket = any("/rest/basket" in r for r in rutas_auth)
 tiene_users = any("/api/Users" in r for r in rutas_auth)
@@ -66,14 +66,14 @@ assert _firma_hallazgo("Inyeccion SQL en API", "A05") == "A05:sqli"
 assert _firma_hallazgo("Bypass autenticacion", "A01") == "A05:bypass_auth"  # detecta por titulo
 print("[OK] _firma_hallazgo: firmas correctas")
 
-# 6 Palabras sensibles A01: validar que estan definidas
+# 6 palabras sensibles a01: validar que estan definidas
 assert "user" in _PALABRAS_SENSIBLES_A01
 assert "basket" in _PALABRAS_SENSIBLES_A01
 assert "admin" in _PALABRAS_SENSIBLES_A01
 assert len(_PALABRAS_SENSIBLES_A01) >= 10
 print(f"[OK] _PALABRAS_SENSIBLES_A01: {len(_PALABRAS_SENSIBLES_A01)} palabras")
 
-# 7 Endpoints privados conocidos
+# 7 endpoints privados conocidos
 assert len(_ENDPOINTS_PRIVADOS_CONOCIDOS) >= 8
 assert any("basket" in e for e in _ENDPOINTS_PRIVADOS_CONOCIDOS)
 assert any("Users" in e for e in _ENDPOINTS_PRIVADOS_CONOCIDOS)

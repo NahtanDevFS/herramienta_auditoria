@@ -2,7 +2,7 @@ from ollama import Client
 
 client = Client(host="http://localhost:11434")
 
-# Una tool de juguete, igual en estructura a las de mi agente
+# una tool de juguete, igual en estructura a las de mi agente
 tools = [{
     "type": "function",
     "function": {

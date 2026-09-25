@@ -1,6 +1,6 @@
-# metodos_http py Modulo de deteccion (A01: Broken Access Control)
-# Comprueba metodos HTTP peligrosos (PUT, DELETE, TRACE) via OPTIONS
-# Prueba vulnerabilidades de Path Traversal intentando leer archivos del sistema
+# metodos_http py modulo de deteccion (a01: broken access control)
+# comprueba metodos HTTP peligrosos (put, delete, trace) via options
+# prueba vulnerabilidades de path traversal intentando leer archivos del sistema
 
 import logging
 from urllib.parse import urljoin, urlparse
@@ -12,7 +12,7 @@ from core.modelo_hallazgo import Hallazgo
 
 ORIGEN = "modulo_metodos_http"
 
-# Metodos peligrosos y su severidad si estan habilitados
+# metodos peligrosos y su severidad si estan habilitados
 METODOS_PELIGROSOS = {
     "PUT": ("alta", 7.5,
             "El metodo PUT permite subir archivos al servidor. Si no esta "
@@ -32,14 +32,14 @@ METODOS_PELIGROSOS = {
               "correctamente controlado."),
 }
 
-# Cargas de path traversal a probar y el patron que confirmaria el exito
+# cargas de path traversal a probar y el patron que confirmaria el exito
 PAYLOADS_TRAVERSAL = [
     "../../../../etc/passwd",
     "..%2f..%2f..%2f..%2fetc%2fpasswd",       # codificado
     "....//....//....//etc/passwd",            # doble punto
-    "../../../../windows/win.ini",             # equivalente en Windows
+    "../../../../windows/win.ini",             # equivalente en windows
 ]
-# Firmas que confirman que se leyo un archivo del sistema
+# firmas que confirman que se leyo un archivo del sistema
 FIRMAS_TRAVERSAL = {
     "etc/passwd": "root:",           # /etc/passwd empieza con "root:"
     "win.ini": "[",                  # win ini contiene secciones [xxx]
@@ -47,7 +47,7 @@ FIRMAS_TRAVERSAL = {
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    # Punto de entrada Comprueba metodos peligrosos y path traversal en el objetivo
+    # punto de entrada comprueba metodos peligrosos y path traversal en el objetivo
     objetivo = config["objetivo"]["url"].strip()
     opciones = config.get("opciones", {})
     timeout = opciones.get("timeout", 10)
@@ -59,12 +59,12 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     hallazgos: list[Hallazgo] = []
     headers = {"User-Agent": user_agent}
 
-    # Parte 1: metodos peligrosos
+    # parte 1: metodos peligrosos
     hallazgos.extend(
         _revisar_metodos(objetivo, headers, timeout, verificar_ssl, logger)
     )
 
-    # Parte 2: path traversal
+    # parte 2: path traversal
     hallazgos.extend(
         _probar_path_traversal(objetivo, headers, timeout, verificar_ssl, logger)
     )
@@ -76,10 +76,10 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 
 def _revisar_metodos(objetivo, headers, timeout, verificar_ssl, logger):
-    # Consulta con OPTIONS que metodos permite el servidor y los evalua
+    # consulta con options que metodos permite el servidor y los evalua
     hallazgos = []
 
-    # 1 Preguntar via OPTIONS que metodos declara el servidor
+    # 1 preguntar via options que metodos declara el servidor
     metodos_declarados = set()
     try:
         resp = requests.options(
@@ -92,12 +92,12 @@ def _revisar_metodos(objetivo, headers, timeout, verificar_ssl, logger):
     except requests.exceptions.RequestException as e:
         logger.debug(f"[metodos_http] OPTIONS fallo: {e}")
 
-    # 2 Evaluar cada metodo peligroso que el servidor declare permitir
+    # 2 evaluar cada metodo peligroso que el servidor declare permitir
     for metodo, (severidad, cvss, descripcion) in METODOS_PELIGROSOS.items():
         if metodo not in metodos_declarados:
             continue
 
-        # Confirmacion activa para TRACE (es seguro de probar)
+        # confirmacion activa para trace (es seguro de probar)
         confirmado = ""
         if metodo == "TRACE":
             try:
@@ -133,10 +133,10 @@ def _revisar_metodos(objetivo, headers, timeout, verificar_ssl, logger):
 
 
 def _probar_path_traversal(objetivo, headers, timeout, verificar_ssl, logger):
-    # Intenta leer archivos del sistema mediante secuencias de path traversal
+    # intenta leer archivos del sistema mediante secuencias de path traversal
     hallazgos = []
 
-    # Probaremos los payloads sobre la ruta base del objetivo
+    # probaremos los payloads sobre la ruta base del objetivo
     base = objetivo if objetivo.endswith("/") else objetivo + "/"
 
     for payload in PAYLOADS_TRAVERSAL:
@@ -153,7 +153,7 @@ def _probar_path_traversal(objetivo, headers, timeout, verificar_ssl, logger):
         if resp.status_code != 200:
             continue
 
-        # ¿El contenido coincide con la firma de un archivo del sistema?
+        # ¿el contenido coincide con la firma de un archivo del sistema?
         contenido = resp.text[:3000]
         for clave, firma in FIRMAS_TRAVERSAL.items():
             if clave in payload.lower() and firma in contenido:
@@ -181,14 +181,14 @@ def _probar_path_traversal(objetivo, headers, timeout, verificar_ssl, logger):
                     url_afectada=url,
                 ))
                 logger.info(f"[metodos_http] PATH TRAVERSAL detectado en {url}")
-                # Un hallazgo confirmado basta no seguimos con mas payloads
+                # un hallazgo confirmado basta no seguimos con mas payloads
                 return hallazgos
 
     logger.info("[metodos_http] No se detecto path traversal.")
     return hallazgos
 
 
-# Prueba independiente:
+# prueba independiente:
 # python3 m modulos metodos_http
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
