@@ -1,7 +1,7 @@
-# sqlmap.py - Modulo de deteccion de inyecciones SQL (A05: Injection)
-# Envuelve sqlmap. A diferencia de otros modulos, ATACA activamente enviando payloads.
-# Usa una configuracion conservadora (level=1, risk=1) por defecto para no alterar datos.
-# Solo funciona si en config se definen URLs con parametros (ej. ?id=1).
+# sqlmap py Modulo de deteccion de inyecciones SQL (A05: Injection)
+# Envuelve sqlmap A diferencia de otros modulos, ATACA activamente enviando payloads
+# Usa una configuracion conservadora (level=1, risk=1) por defecto para no alterar datos
+# Solo funciona si en config se definen URLs con parametros (ej ?id=1)
 
 import logging
 import os
@@ -16,12 +16,12 @@ ORIGEN = "modulo_sqlmap"
 
 BINARIO = "sqlmap"
 
-# Timeout por defecto POR CADA URL probada, en segundos.
+# Timeout por defecto POR CADA URL probada, en segundos
 TIMEOUT_POR_URL = 180
 
 
 def _localizar_binario(logger) -> str | None:
-    # Busca sqlmap en el PATH y en ubicaciones habituales.
+    # Busca sqlmap en el PATH y en ubicaciones habituales
     ruta = shutil.which(BINARIO)
     if ruta:
         return ruta
@@ -38,7 +38,7 @@ def _localizar_binario(logger) -> str | None:
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    # Punto de entrada. Prueba cada URL con parametros y genera Hallazgos criticos si hay inyeccion.
+    # Punto de entrada Prueba cada URL con parametros y genera Hallazgos criticos si hay inyeccion
     conf_sqlmap = config.get("sqlmap", {})
     urls = conf_sqlmap.get("urls", []) or []
     timeout = conf_sqlmap.get("timeout", TIMEOUT_POR_URL)
@@ -47,7 +47,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
     hallazgos: list[Hallazgo] = []
 
-    # --- Comprobacion previa: hace falta al menos una URL con parametros ---
+    # Comprobacion previa: hace falta al menos una URL con parametros
     if not urls:
         logger.warning(
             "[sqlmap] No hay URLs con parametros definidas en config.yaml "
@@ -56,7 +56,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         )
         return hallazgos
 
-    # --- Localizar el binario ---
+    # Localizar el binario
     ruta_binario = _localizar_binario(logger)
     if ruta_binario is None:
         logger.error(
@@ -68,7 +68,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     opciones = config.get("opciones", {})
     user_agent = opciones.get("user_agent", "AuditoriaWeb/1.0")
 
-    # --- Probar cada URL ---
+    # Probar cada URL
     for url in urls:
         if "?" not in url or "=" not in url:
             logger.warning(
@@ -92,7 +92,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 
 def _probar_url(ruta_binario, url, timeout, nivel, riesgo, user_agent, logger):
-    # Ejecuta sqlmap contra UNA url y devuelve un Hallazgo si encuentra inyeccion, o None si no.
+    # Ejecuta sqlmap contra UNA url y devuelve un Hallazgo si encuentra inyeccion, o None si no
     comando = [
         ruta_binario,
         "-u", url,
@@ -125,16 +125,16 @@ def _probar_url(ruta_binario, url, timeout, nivel, riesgo, user_agent, logger):
         return None
 
     salida = proceso.stdout or ""
-    # Quitar posibles codigos de color ANSI residuales.
+    # Quitar posibles codigos de color ANSI residuales
     salida = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", salida)
 
     return _parsear_salida(salida, url, logger)
 
 
 def _parsear_salida(salida: str, url: str, logger):
-    # Analiza la salida de sqlmap. Si detecto inyeccion (busca 'is vulnerable'),
-    # extrae parametro, tecnicas y DBMS para construir un Hallazgo critico.
-    # ¿Encontro inyeccion? Buscamos las señales claras de sqlmap.
+    # Analiza la salida de sqlmap Si detecto inyeccion (busca 'is vulnerable'),
+    # extrae parametro, tecnicas y DBMS para construir un Hallazgo critico
+    # ¿Encontro inyeccion? Buscamos las señales claras de sqlmap
     vulnerable = (
         "is vulnerable" in salida
         or "identified the following injection point" in salida
@@ -208,9 +208,9 @@ def _parsear_salida(salida: str, url: str, logger):
 
 
 # Prueba independiente:
-#     python3 -m modulos.sqlmap
-# IMPORTANTE: apunta a un objetivo vulnerable AUTORIZADO. Aqui usamos un
-# servidor local de prueba que debes tener corriendo (ver la conversacion).
+# python3 m modulos sqlmap
+# IMPORTANTE: apunta a un objetivo vulnerable AUTORIZADO Aqui usamos un
+# servidor local de prueba que debo tener corriendo (ver la conversacion)
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")

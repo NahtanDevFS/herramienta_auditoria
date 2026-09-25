@@ -1,6 +1,6 @@
-# navegador.py - Modo navegador AUTONOMO y GENERICO para el agente (CAPA 2)
-# Da al agente un navegador real (Playwright) con herramientas genericas para explorar y probar inyecciones.
-# Se restringe al dominio del objetivo y graba en video.
+# navegador py Modo navegador AUTONOMO y GENERICO para el agente (CAPA 2)
+# Da al agente un navegador real (Playwright) con herramientas genericas para explorar y probar inyecciones
+# Se restringe al dominio del objetivo y graba en video
 
 import os
 import re
@@ -16,14 +16,14 @@ ERRORES_SQL = ["sql syntax", "sqlite", "psql", "ora-", "mysql_fetch",
 
 def _reflejo_xss_peligroso(payload: str, contenido_html: str) -> bool:
     # Decide si el payload se refleja de forma REALMENTE peligrosa (posible XSS),
-    # para no marcar falsos positivos (p.ej. un payload SQL como "' OR 1=1--" que
-    # el buscador simplemente muestra de vuelta como texto).
-    #   1) El payload debe traer caracteres HTML activos: una etiqueta (<...>),
-    #      un 'javascript:' o un manejador de evento (onerror=, onload=, ...).
-    #      Un texto plano sin esto NO puede ejecutarse aunque se refleje.
-    #   2) Debe aparecer SIN escapar en el HTML. Si el framework lo escapo
-    #      (&lt;script&gt;), el crudo '<script>' no estara presente y es seguro.
-    # No afecta la deteccion fuerte (xss_confirmado por dialog) ni la de SQLi.
+    # para no marcar falsos positivos (como un payload SQL como "' OR 1=1 " que
+    # el buscador simplemente muestra de vuelta como texto)
+    # 1) El payload debe traer caracteres HTML activos: una etiqueta (< >),
+    # un 'javascript:' o un manejador de evento (onerror=, onload=, )
+    # Un texto plano sin esto NO puede ejecutarse aunque se refleje
+    # 2) Debe aparecer SIN escapar en el HTML Si el framework lo escapo
+    # (&lt script&gt ), el crudo '<script>' no estara presente y es seguro
+    # No afecta la deteccion fuerte (xss_confirmado por dialog) ni la de SQLi
     p = (payload or "").lower()
     if not p:
         return False
@@ -58,9 +58,9 @@ class NavegadorAgente:
                 args=["--window-size=1280,1080", "--window-position=0,0"]
             )
         except Exception as e:
-            # headless=False falla si no hay pantalla (sin WSLg / sin DISPLAY).
+            # headless=False falla si no hay pantalla (sin WSLg / sin DISPLAY)
             # En vez de romper, caemos a modo oculto y seguimos (las capturas y
-            # el panel en vivo siguen funcionando igual).
+            # el panel en vivo siguen funcionando igual)
             if not headless:
                 if logger:
                     logger.warning(f"[navegador] No se pudo abrir ventana visible "
@@ -77,7 +77,7 @@ class NavegadorAgente:
         self._page = self._context.new_page()
         self._page.set_default_timeout(8000)
 
-    # ----- utilidades ---------------------------------------------------------
+    # utilidades
 
     def _log(self, msg):
         if self.logger:
@@ -132,10 +132,10 @@ class NavegadorAgente:
             except Exception:
                 continue
 
-    # ----- herramientas de alto nivel (las llama el agente) -------------------
+    # herramientas de alto nivel (las llama el agente)
 
     def login_real(self, url_login, usuario, contrasena):
-        # Inicia sesion REAL con credenciales (no payloads) como paso previo a auditorias. Devuelve exito.
+        # Inicia sesion REAL con credenciales (no payloads) como paso previo a auditorias Devuelve exito
         try:
             self.navegar(url_login)
         except Exception:
@@ -193,7 +193,7 @@ class NavegadorAgente:
             return {"error": f"No se pudo navegar: {e}"}
 
     def analizar_pagina(self):
-        # LOS OJOS. Devuelve resumen compacto (formularios, buscadores, enlaces) para decidir que atacar.
+        # LOS OJOS Devuelve resumen compacto (formularios, buscadores, enlaces) para decidir que atacar
         try:
             self._descartar_overlays()
             self._page.wait_for_timeout(800)  # asegura DOM pintado en SPAs
@@ -253,10 +253,10 @@ class NavegadorAgente:
             return {"error": f"No se pudo analizar la pagina: {e}"}
 
     def _estado_sesion(self, url_antes):
-        # Heuristica ROBUSTA para saber si hay sesion iniciada (valida para SPAs).
+        # Heuristica ROBUSTA para saber si hay sesion iniciada (valida para SPAs)
         # No depende de una clave de token concreta ni de que cambie la URL: mira
         # varias senales (token en storage, desaparicion del formulario de login,
-        # indicios de "cerrar sesion", cambio de vista).
+        # indicios de "cerrar sesion", cambio de vista)
         try:
             info = self._page.evaluate(
                 """
@@ -287,7 +287,7 @@ class NavegadorAgente:
         hay_password = bool(info.get("hayPassword"))
         hay_logout = bool(info.get("hayLogout"))
         hay_error = bool(info.get("hayErrorLogin"))
-        # Autenticado si hay senal positiva y NO hay mensaje de error de login.
+        # Autenticado si hay senal positiva y NO hay mensaje de error de login
         autenticado = (not hay_error) and (
             token_like or hay_logout or (not hay_password)
             or (url_cambio and "login" not in url_actual.lower()))
@@ -297,7 +297,7 @@ class NavegadorAgente:
                 "url_cambio": url_cambio, "claves_storage": info.get("claves", [])}
 
     def iniciar_sesion(self, url_login, usuario, contrasena):
-        # Inicia sesion REAL con credenciales validas.
+        # Inicia sesion REAL con credenciales validas
         try:
             self.navegar(url_login)
         except Exception:
@@ -403,8 +403,8 @@ class NavegadorAgente:
             return {"error": f"Error durante el login: {e}"}
 
     def probar_busqueda(self, payload):
-        # Inyecta payload en campo de busqueda/texto y detecta reflejo (XSS) o errores (SQLi).
-        # Escucha eventos dialog para confirmar XSS real.
+        # Inyecta payload en campo de busqueda/texto y detecta reflejo (XSS) o errores (SQLi)
+        # Escucha eventos dialog para confirmar XSS real
         self._descartar_overlays()
         campo = self._encontrar([
             "input[type=search]", "input[name*=search i]", "input[id*=search i]",
@@ -416,7 +416,7 @@ class NavegadorAgente:
             return {"error": "No se encontro un campo de busqueda/texto. "
                              "Usa analizar_pagina para ver que inputs hay."}
         try:
-            # Escuchar dialogs (alert/confirm/prompt) para confirmar XSS real.
+            # Escuchar dialogs (alert/confirm/prompt) para confirmar XSS real
             dialog_disparado = [False]
             def _on_dialog(dialog):
                 dialog_disparado[0] = True
@@ -436,7 +436,7 @@ class NavegadorAgente:
             xss_confirmado = dialog_disparado[0]
             error_sql = next((e for e in ERRORES_SQL if e in contenido), None)
 
-            # Quitar listener para no acumular.
+            # Quitar listener para no acumular
             try:
                 self._page.remove_listener("dialog", _on_dialog)
             except Exception:
@@ -459,12 +459,12 @@ class NavegadorAgente:
             return {"error": f"Error durante la busqueda: {e}"}
 
     def probar_idor(self, url):
-        # Prueba IDOR: varia el id numerico de la URL original y compara respuesta.
+        # Prueba IDOR: varia el id numerico de la URL original y compara respuesta
         if not self._permitida(url):
             return {"error": "URL fuera del dominio autorizado."}
-        # GUARDA 1: un IDOR se prueba sobre un id LIMPIO (?id=5, /item/5). Si la URL
-        # trae caracteres de inyeccion (comillas, espacios, "--", %27...), no es un
-        # id legitimo sino un payload: no tiene sentido probar IDOR ahi.
+        # GUARDA 1: un IDOR se prueba sobre un id LIMPIO (?id=5, /item/5) Si la URL
+        # trae caracteres de inyeccion (comillas, espacios, " ", %27 ), no es un
+        # id legitimo sino un payload: no tiene sentido probar IDOR ahi
         marcadores_inyeccion = ("'", '"', " ", "--", "%27", "%22", "%20")
         if any(m in url for m in marcadores_inyeccion):
             return {"error": "La URL no es un id limpio (parece traer un payload de "
@@ -472,7 +472,7 @@ class NavegadorAgente:
                              "por ejemplo .../item/5 o ...?id=5."}
         from urllib.parse import urlparse, urlunparse
         p = urlparse(url)
-        # Buscar el numero SOLO en la ruta o el query, nunca en el host:puerto.
+        # Buscar el numero SOLO en la ruta o el query, nunca en el host:puerto
         if re.search(r"\d", p.query or ""):
             zona, es_query = p.query, True
         elif re.search(r"\d", p.path or ""):
@@ -503,9 +503,9 @@ class NavegadorAgente:
             len_var = len(contenido_var)
 
             # GUARDA 2: en un SPA, CUALQUIER ruta devuelve el mismo shell HTML (mismo
-            # tamano), asi que "hay contenido" no significa nada. Solo es indicio de
+            # tamano), asi que "hay contenido" no significa nada Solo es indicio de
             # IDOR si la variacion devuelve algo REALMENTE distinto del original (no
-            # el mismo shell). Si son identicas o casi identicas, NO es IDOR.
+            # el mismo shell) Si son identicas o casi identicas, NO es IDOR
             dif = abs(len_var - len_orig)
             identicas = contenido_var == contenido_orig
             accesible = (len_var > 200 and not identicas and dif > 100)
@@ -523,8 +523,8 @@ class NavegadorAgente:
             return {"error": f"Error durante la prueba IDOR: {e}"}
 
     def probar_formulario(self, payload):
-        # Prueba inyeccion en un formulario GENERICO de datos (contacto, perfil).
-        # Detecta reflejos/errores y confirma XSS con dialogs.
+        # Prueba inyeccion en un formulario GENERICO de datos (contacto, perfil)
+        # Detecta reflejos/errores y confirma XSS con dialogs
         self._descartar_overlays()
         campo = self._encontrar([
             "form textarea", "form input[type=text]", "form input[type=email]",
@@ -536,7 +536,7 @@ class NavegadorAgente:
             return {"error": "No se encontro un campo de texto en un formulario. "
                              "Usa analizar_pagina para ver los formularios disponibles."}
         try:
-            # Escuchar dialogs para confirmar XSS real.
+            # Escuchar dialogs para confirmar XSS real
             dialog_disparado = [False]
             def _on_dialog(dialog):
                 dialog_disparado[0] = True
@@ -571,7 +571,7 @@ class NavegadorAgente:
             xss_confirmado = dialog_disparado[0]
             error_sql = next((e for e in ERRORES_SQL if e in contenido), None)
 
-            # Quitar listener.
+            # Quitar listener
             try:
                 self._page.remove_listener("dialog", _on_dialog)
             except Exception:
@@ -596,7 +596,7 @@ class NavegadorAgente:
         ruta = self._captura(nota or "captura manual")
         return {"ok": True, "captura": ruta}
 
-    # ----- ciclo de vida ------------------------------------------------------
+    # ciclo de vida
 
     def cerrar(self):
         video_path = None
@@ -622,9 +622,9 @@ class NavegadorAgente:
 
     def finalizar_dejando_abierto(self):
         # Guarda el video (cerrando el contexto grabador) pero DEJA el navegador
-        # abierto: abre una pestana nueva en el objetivo. No detiene Playwright ni
+        # abierto: abre una pestana nueva en el objetivo No detiene Playwright ni
         # cierra el navegador, asi la ventana sigue visible en el escritorio virtual
-        # (el proceso que llama debe seguir vivo para que Chromium no se cierre).
+        # (el proceso que llama debe seguir vivo para que Chromium no se cierre)
         video_path = None
         cookies = []
         try:
@@ -639,7 +639,7 @@ class NavegadorAgente:
         except Exception as e:
             self._log(f"cierre de contexto (video): {e}")
         # Abrir un contexto/pestana nuevos (sin grabar) para dejar algo a la vista,
-        # reinyectando las cookies para mantener la sesion cuando el login es por cookie.
+        # reinyectando las cookies para mantener la sesion cuando el login es por cookie
         try:
             self._context = self._browser.new_context(
                 ignore_https_errors=True,
@@ -663,7 +663,7 @@ class NavegadorAgente:
 
 
 def declarar_tools_navegador():
-    # Tools genericas de alto nivel (optimizadas para LLMs 7B-8B).
+    # Tools genericas de alto nivel (optimizadas para LLMs 7B 8B)
     return [
         {"type": "function", "function": {
             "name": "navegar",

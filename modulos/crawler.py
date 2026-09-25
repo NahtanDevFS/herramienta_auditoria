@@ -1,6 +1,6 @@
-# crawler.py - Modulo de reconocimiento (Recon / base para A05)
-# Rastrea el sitio objetivo para descubrir rutas, formularios y parametros.
-# Usa Playwright (en un subproceso aislado) para renderizar JS, con un fallback a HTTP puro.
+# crawler py Modulo de reconocimiento (Recon / base para A05)
+# Rastrea el sitio objetivo para descubrir rutas, formularios y parametros
+# Usa Playwright (en un subproceso aislado) para renderizar JS, con un fallback a HTTP puro
 
 import json
 import logging
@@ -37,7 +37,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
     # Credenciales (si las hay): permiten rastrear TAMBIEN la zona autenticada, y
     # asi descubrir rutas reales que no son visibles sin iniciar sesion (el login
-    # no enlaza a la zona privada). Sin esto, en un SPA solo se ve el login.
+    # no enlaza a la zona privada) Sin esto, en un SPA solo se ve el login
     agente_cfg = config.get("agente_ia", {}) or {}
     aut_cfg = config.get("autenticacion", {}) or {}
     usuario = agente_cfg.get("usuario") or aut_cfg.get("usuario")
@@ -68,7 +68,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
                 f"parametros, {len(mapa)} pagina(s) con superficie de ataque.")
 
     _guardar_urls_para_sqlmap(urls_param, config, logger)
-    config["_mapa_sitio"] = mapa   # config es compartido -> lo lee el agente
+    config["_mapa_sitio"] = mapa   # config es compartido > lo lee el agente
     config["_rutas_descubiertas"] = sorted(rutas)  # para sembrar objetivos estables
     config["_endpoints_api"] = endpoints_api       # endpoints REST para el agente
     if endpoints_api:
@@ -77,7 +77,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     return _construir_hallazgos(objetivo, rutas, formularios, urls_param, logger)
 
 
-# --- Rastreo con navegador (Subproceso aislado) ---
+# Rastreo con navegador (Subproceso aislado)
 def _rastrear_con_subproceso(objetivo, max_paginas, max_prof, logger,
                              usuario=None, contrasena=None):
     tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
@@ -87,7 +87,7 @@ def _rastrear_con_subproceso(objetivo, max_paginas, max_prof, logger,
         cmd = [sys.executable, "-m", "modulos.crawler_worker",
                objetivo, str(max_paginas), str(max_prof), salida_json]
         # Las credenciales se pasan por variables de entorno (no por argv, que es
-        # visible en la lista de procesos).
+        # visible en la lista de procesos)
         env = os.environ.copy()
         if usuario:
             env["CRAWLER_USER"] = usuario
@@ -123,7 +123,7 @@ def _rastrear_con_subproceso(objetivo, max_paginas, max_prof, logger,
             pass
 
 
-# --- Rastreo HTTP clasico (Fallback) ---
+# Rastreo HTTP clasico (Fallback)
 def _rastrear_con_http(objetivo, dominio, max_paginas, max_prof, config, logger):
     import requests
     from bs4 import BeautifulSoup
@@ -189,7 +189,7 @@ def _rastrear_con_http(objetivo, dominio, max_paginas, max_prof, config, logger)
             "formularios": formularios, "mapa": mapa}
 
 
-# --- Auxiliares ---
+# Auxiliares
 def _extraer_formulario_bs(form, url_pagina):
     action = form.get("action", "")
     metodo = form.get("method", "get").upper()
@@ -237,7 +237,7 @@ def _construir_hallazgos(objetivo, rutas, formularios, urls_param, logger):
         hallazgos.append(Hallazgo(
             # El conteo debe coincidir con las rutas realmente listadas (paths
             # unicos), no con el total de URLs crudas (que incluye duplicados por
-            # query/fragment). Antes decia N pero listaba menos.
+            # query/fragment) Antes decia N pero listaba menos
             titulo=f"Mapa del sitio: {len(paths)} ruta(s) descubierta(s)",
             categoria="A05", severidad="informativa", cvss=None,
             descripcion="Inventario de rutas descubiertas durante el rastreo (con "

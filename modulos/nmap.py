@@ -1,6 +1,6 @@
-# nmap.py - Modulo de escaneo de puertos (A02: Security Misconfiguration)
-# Detecta puertos abiertos y servicios de riesgo expuestos (bases de datos, RDP, FTP).
-# Usa nmap sin privilegios (-sT) y parsea la salida XML nativa.
+# nmap py Modulo de escaneo de puertos (A02: Security Misconfiguration)
+# Detecta puertos abiertos y servicios de riesgo expuestos (bases de datos, RDP, FTP)
+# Usa nmap sin privilegios ( sT) y parsea la salida XML nativa
 
 import logging
 import os
@@ -17,13 +17,13 @@ ORIGEN = "modulo_nmap"
 
 BINARIO = "nmap"
 
-# Puertos a escanear por defecto (los N mas comunes segun nmap).
+# Puertos a escanear por defecto (los N mas comunes segun nmap)
 TOP_PORTS_DEFECTO = 1000
 
-# Timeout por defecto del escaneo completo, en segundos.
+# Timeout por defecto del escaneo completo, en segundos
 TIMEOUT_DEFECTO = 300
 
-# Puertos que en un servidor web casi nunca deberian estar expuestos.
+# Puertos que en un servidor web casi nunca deberian estar expuestos
 SERVICIOS_RIESGO = {
     21:    ("FTP", "media", 5.3,
             "FTP transmite credenciales y datos sin cifrar."),
@@ -68,7 +68,7 @@ SERVICIOS_RIESGO = {
 
 
 def _localizar_binario(logger) -> str | None:
-    # Busca el binario de nmap en el PATH y ubicaciones habituales.
+    # Busca el binario de nmap en el PATH y ubicaciones habituales
     ruta = shutil.which(BINARIO)
     if ruta:
         return ruta
@@ -87,7 +87,7 @@ def _localizar_binario(logger) -> str | None:
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    # Punto de entrada. Escanea puertos y genera hallazgos informativos y de riesgo.
+    # Punto de entrada Escanea puertos y genera hallazgos informativos y de riesgo
     objetivo_url = config["objetivo"]["url"].strip()
     host = urlparse(objetivo_url).hostname
 
@@ -102,7 +102,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
     hallazgos: list[Hallazgo] = []
 
-    # --- Paso 1: localizar el binario ---
+    # Paso 1: localizar el binario
     ruta_binario = _localizar_binario(logger)
     if ruta_binario is None:
         logger.error(
@@ -111,8 +111,8 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         )
         return hallazgos
 
-    # --- Paso 2: construir el comando ---
-    # Archivo temporal para la salida XML.
+    # Paso 2: construir el comando
+    # Archivo temporal para la salida XML
     with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp:
         ruta_xml = tmp.name
 
@@ -144,7 +144,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     )
     logger.debug(f"[nmap] Comando: {' '.join(comando)}")
 
-    # --- Paso 3: ejecutar ---
+    # Paso 3: ejecutar
     try:
         subprocess.run(
             comando,
@@ -163,7 +163,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         _borrar(ruta_xml)
         return hallazgos
 
-    # Paso 4: parsear el XML 
+    # Paso 4: parsear el XML
     try:
         puertos = _parsear_xml(ruta_xml, logger)
     except Exception as e:
@@ -179,8 +179,8 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
     logger.info(f"[nmap] {len(puertos)} puerto(s) abierto(s) encontrado(s).")
 
-    # Paso 5: generar hallazgos 
-    # 5a. Inventario informativo de todos los puertos abiertos.
+    # Paso 5: generar hallazgos
+    # 5a Inventario informativo de todos los puertos abiertos
     lineas = []
     for p in puertos:
         desc = f"{p['puerto']}/{p['protocolo']} {p['servicio']}"
@@ -191,7 +191,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
             desc += ")"
         lineas.append(desc)
         # Mostrar cada puerto en el log: para nmap, esta es la informacion
-        # principal y conviene verla durante la ejecucion.
+        # principal y conviene verla durante la ejecucion
         logger.info(f"[nmap]   -> {desc}")
 
     hallazgos.append(Hallazgo(
@@ -213,7 +213,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         url_afectada=host,
     ))
 
-    # 5b. Un hallazgo por cada servicio de riesgo expuesto.
+    # 5b Un hallazgo por cada servicio de riesgo expuesto
     for p in puertos:
         num = p["puerto"]
         if num not in SERVICIOS_RIESGO:
@@ -257,7 +257,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 
 def _parsear_xml(ruta_xml: str, logger) -> list[dict]:
-    # Lee el XML generado por nmap y devuelve la lista de puertos abiertos.
+    # Lee el XML generado por nmap y devuelve la lista de puertos abiertos
     if not os.path.isfile(ruta_xml) or os.path.getsize(ruta_xml) == 0:
         logger.warning("[nmap] El archivo de salida XML esta vacio o no existe.")
         return []
@@ -267,8 +267,8 @@ def _parsear_xml(ruta_xml: str, logger) -> list[dict]:
 
     puertos = []
     # Estructura: <nmaprun><host><ports><port portid="80" protocol="tcp">
-    #               <state state="open"/>
-    #               <service name="http" product="nginx" version="1.18"/>
+    # <state state="open"/>
+    # <service name="http" product="nginx" version="1 18"/>
     for host_el in raiz.findall("host"):
         ports_el = host_el.find("ports")
         if ports_el is None:
@@ -295,7 +295,7 @@ def _parsear_xml(ruta_xml: str, logger) -> list[dict]:
 
 
 def _borrar(ruta: str) -> None:
-    # Elimina el archivo temporal, ignorando errores.
+    # Elimina el archivo temporal, ignorando errores
     try:
         os.unlink(ruta)
     except OSError:
@@ -303,8 +303,8 @@ def _borrar(ruta: str) -> None:
 
 
 # Prueba independiente:
-#     python3 -m modulos.nmap
-# Escanea scanme.nmap.org, que autoriza explicitamente ser escaneado.
+# python3 m modulos nmap
+# Escanea scanme nmap org, que autoriza explicitamente ser escaneado
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")
@@ -312,7 +312,7 @@ if __name__ == "__main__":
     config_prueba = {
         "objetivo": {"url": "http://scanme.nmap.org"},
         "opciones": {},
-        # Para la prueba usamos pocos puertos para que sea rapido.
+        # Para la prueba usamos pocos puertos para que sea rapido
         "nmap": {"puertos": "22,80,443,3306", "timeout": 120},
     }
 

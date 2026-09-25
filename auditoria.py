@@ -1,6 +1,6 @@
-# auditoria.py
-# Contiene la funcion central que ejecuta una auditoria a partir de un dict de config.
-# Se separa de main.py para reutilizar la misma logica en CLI y GUI.
+# auditoria py
+# Contiene la funcion central que ejecuta una auditoria a partir de un dict de config
+# Se separa de main py para reutilizar la misma logica en CLI y GUI
 
 import logging
 import os
@@ -9,9 +9,9 @@ from core.reporte import Reporte
 from core.riesgo import MotorRiesgo
 
 
-# Lista de (clave_en_config, nombre_modulo) en el ORDEN de ejecucion.
-# El crawler va antes que sqlmap para poder alimentarlo con URLs.
-# Cada entrada se importa de forma perezosa (solo si el modulo esta activo).
+# Lista de (clave_en_config, nombre_modulo) en el ORDEN de ejecucion
+# El crawler va antes que sqlmap para poder alimentarlo con URLs
+# Cada entrada se importa de forma perezosa (solo si el modulo esta activo)
 ORDEN_MODULOS = [
     ("cabeceras_http", "cabeceras_http"),
     ("cookies", "cookies"),
@@ -32,7 +32,7 @@ ORDEN_MODULOS = [
 def ejecutar_auditoria(config: dict, logger: logging.Logger,
                        callback_progreso=None) -> dict:
     # Ejecuta la auditoria completa segun la configuracion dada y devuelve
-    # el reporte construido con hallazgos + analisis de riesgo.
+    # el reporte construido con hallazgos + analisis de riesgo
     objetivo = config["objetivo"]
     url = objetivo["url"].strip()
     nombre = objetivo.get("nombre", "")
@@ -42,7 +42,7 @@ def ejecutar_auditoria(config: dict, logger: logging.Logger,
     reporte = Reporte(objetivo=url, nombre=nombre)
 
     modulos_cfg = config.get("modulos", {})
-    # Filtrar los modulos activos, respetando el orden de ejecucion.
+    # Filtrar los modulos activos, respetando el orden de ejecucion
     activos = [(clave, mod) for clave, mod in ORDEN_MODULOS
                if modulos_cfg.get(clave)]
     total = len(activos)
@@ -51,11 +51,11 @@ def ejecutar_auditoria(config: dict, logger: logging.Logger,
         if callback_progreso:
             callback_progreso(i, total, nombre_modulo)
 
-        # Antes de sqlmap, pasarle las URLs con parametros del crawler.
+        # Antes de sqlmap, pasarle las URLs con parametros del crawler
         if nombre_modulo == "sqlmap":
             _alimentar_sqlmap_con_crawler(config, logger)
 
-        # Antes del agente de IA, pasarle los hallazgos ya acumulados.
+        # Antes del agente de IA, pasarle los hallazgos ya acumulados
         if nombre_modulo == "agente_pentesting":
             config["_hallazgos_previos"] = [h.to_dict() for h in reporte.hallazgos]
 
@@ -68,14 +68,14 @@ def ejecutar_auditoria(config: dict, logger: logging.Logger,
         except Exception as e:
             logger.error(f"Error en el modulo {nombre_modulo}: {e}")
 
-    # Resumen de cierre del agente de IA (bitacora + narrativa), si lo genero.
+    # Resumen de cierre del agente de IA (bitacora + narrativa), si lo genero
     if config.get("_resumen_agente"):
         reporte.set_resumen_agente(config["_resumen_agente"])
 
     if callback_progreso:
         callback_progreso(total, total, "analisis de riesgo")
 
-    # Analisis de riesgo.
+    # Analisis de riesgo
     logger.info("Ejecutando analisis de riesgos...")
     motor = MotorRiesgo(reporte.hallazgos)
     analisis = motor.analizar()
@@ -90,7 +90,7 @@ def ejecutar_auditoria(config: dict, logger: logging.Logger,
 
 
 def _alimentar_sqlmap_con_crawler(config, logger):
-    # Pasa a sqlmap las URLs con parametros que descubrio el crawler.
+    # Pasa a sqlmap las URLs con parametros que descubrio el crawler
     ruta_urls = os.path.join(
         config.get("salida", {}).get("carpeta", "resultados"),
         "urls_con_parametros.txt"

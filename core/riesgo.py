@@ -1,6 +1,6 @@
-# riesgo.py — Motor de analisis de riesgos.
+# riesgo py — Motor de analisis de riesgos
 # Toma la lista de hallazgos y produce: normalizacion de CVSS, matriz de
-# riesgo (probabilidad x impacto) y metricas agregadas.
+# riesgo (probabilidad x impacto) y metricas agregadas
 
 from core.modelo_hallazgo import Hallazgo, Severidad
 
@@ -21,7 +21,7 @@ IMPACTO_POR_SEVERIDAD = {
     Severidad.INFORMATIVA: 1,
 }
 
-# Probabilidad de explotacion tipica por categoria OWASP Top 10:2025 (1-5).
+# Probabilidad de explotacion tipica por categoria OWASP Top 10:2025 (1 5)
 PROBABILIDAD_POR_CATEGORIA = {
     "A01": 4,  # Broken Access Control (incluye SSRF)
     "A02": 4,  # Security Misconfiguration

@@ -1,6 +1,6 @@
-# cookies.py - Modulo de deteccion (A04: Cryptographic Failures)
-# Revisa las cookies que envia la web y comprueba los flags de seguridad.
-# Genera un Hallazgo por cada cookie con un flag ausente o mal puesto (Secure, HttpOnly, SameSite).
+# cookies py Modulo de deteccion (A04: Cryptographic Failures)
+# Revisa las cookies que envia la web y comprueba los flags de seguridad
+# Genera un Hallazgo por cada cookie con un flag ausente o mal puesto (Secure, HttpOnly, SameSite)
 
 import logging
 
@@ -13,8 +13,8 @@ ORIGEN = "modulo_cookies"
 
 
 def _analizar_cookie(cookie, objetivo: str) -> list[Hallazgo]:
-    # Analiza UNA cookie y devuelve los hallazgos de los flags que le falten.
-    # 'cookie' es un objeto del cookiejar de requests.
+    # Analiza UNA cookie y devuelve los hallazgos de los flags que le falten
+    # 'cookie' es un objeto del cookiejar de requests
     hallazgos: list[Hallazgo] = []
     nombre = cookie.name
 
@@ -89,7 +89,7 @@ def _analizar_cookie(cookie, objetivo: str) -> list[Hallazgo]:
             url_afectada=objetivo,
         ))
     elif samesite.lower() == "none":
-        # SameSite=None es valido pero debe ir siempre con Secure. Informativo.
+        # SameSite=None es valido pero debe ir siempre con Secure Informativo
         hallazgos.append(Hallazgo(
             titulo=f"Cookie con SameSite=None: {nombre}",
             categoria="A04",
@@ -114,8 +114,8 @@ def _analizar_cookie(cookie, objetivo: str) -> list[Hallazgo]:
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    # Punto de entrada del modulo (lo llama main.py).
-    # Hace peticion GET y revisa los flags de las cookies establecidas.
+    # Punto de entrada del modulo (lo llama main py)
+    # Hace peticion GET y revisa los flags de las cookies establecidas
     objetivo = config["objetivo"]["url"].strip()
     opciones = config.get("opciones", {})
     timeout = opciones.get("timeout", 10)
@@ -145,7 +145,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         logger.error(f"[cookies] No se pudo conectar con {objetivo}: {e}")
         return hallazgos
 
-    # respuesta.cookies es un RequestsCookieJar iterable de objetos cookie.
+    # respuesta cookies es un RequestsCookieJar iterable de objetos cookie
     cookies = list(respuesta.cookies)
 
     if not cookies:
@@ -173,14 +173,14 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 
 # Prueba independiente:
-#     python3 -m modulos.cookies
+# python3 m modulos cookies
 # Se usa httpbin, que permite pedir que el servidor establezca una cookie
-# de prueba sin flags, para comprobar que el modulo la detecta.
+# de prueba sin flags, para comprobar que el modulo la detecta
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")
 
-    # httpbin.org/cookies/set/NOMBRE/VALOR establece una cookie sin flags.
+    # httpbin org/cookies/set/NOMBRE/VALOR establece una cookie sin flags
     config_prueba = {
         "objetivo": {"url": "https://httpbin.org/cookies/set/sesion/abc123"},
         "opciones": {"timeout": 15, "verificar_ssl": True},

@@ -1,7 +1,7 @@
-# archivos_expuestos.py - Modulo de deteccion de archivos expuestos (A02: Security Misconfiguration)
-# Busca archivos sensibles accesibles (.git/HEAD, .env, backups, configs).
-# Estrategia anti-falsos-positivos: pide una ruta inexistente para usarla de
-# referencia y comprueba firmas en el contenido descargado.
+# archivos_expuestos py Modulo de deteccion de archivos expuestos (A02: Security Misconfiguration)
+# Busca archivos sensibles accesibles ( git/HEAD, env, backups, configs)
+# Estrategia anti falsos positivos: pide una ruta inexistente para usarla de
+# referencia y comprueba firmas en el contenido descargado
 
 import logging
 import random
@@ -16,9 +16,9 @@ from core.modelo_hallazgo import Hallazgo
 ORIGEN = "modulo_archivos_expuestos"
 
 
-# Rutas sensibles a comprobar.
+# Rutas sensibles a comprobar
 # Define la ruta, severidad, impacto y una 'firma' de texto obligatoria
-# para descartar falsos positivos que responden con HTTP 200 (ej. paginas 404 custom)
+# para descartar falsos positivos que responden con HTTP 200 (ej paginas 404 custom)
 RUTAS_SENSIBLES = [
     {
         "ruta": ".git/HEAD",
@@ -34,7 +34,7 @@ RUTAS_SENSIBLES = [
             "Bloquear el acceso al directorio .git desde el servidor web o "
             "eliminarlo del directorio publico de despliegue."
         ),
-        "firma": "ref:",  # un .git/HEAD real contiene "ref: refs/heads/..."
+        "firma": "ref:",  # un git/HEAD real contiene "ref: refs/heads/ "
     },
     {
         "ruta": ".git/config",
@@ -47,7 +47,7 @@ RUTAS_SENSIBLES = [
             "informacion sensible."
         ),
         "recomendacion": "Bloquear el acceso al directorio .git.",
-        "firma": "[core]",  # un .git/config real contiene la seccion [core]
+        "firma": "[core]",  # un git/config real contiene la seccion [core]
     },
     {
         "ruta": ".env",
@@ -63,7 +63,7 @@ RUTAS_SENSIBLES = [
             "Mover el archivo .env fuera del directorio publico y bloquear su "
             "acceso desde el servidor web. Rotar cualquier credencial expuesta."
         ),
-        "firma": "=",  # un .env real tiene lineas tipo CLAVE=valor
+        "firma": "=",  # un env real tiene lineas tipo CLAVE=valor
     },
     {
         "ruta": "config.php",
@@ -79,7 +79,7 @@ RUTAS_SENSIBLES = [
             "Asegurar que los archivos .php se procesen y no se sirvan como "
             "texto; mover la configuracion fuera del directorio publico."
         ),
-        "firma": None,  # dificil de confirmar por contenido; se valida por 200 real
+        "firma": None,  # dificil de confirmar por contenido se valida por 200 real
     },
     {
         "ruta": "backup.zip",
@@ -142,21 +142,21 @@ RUTAS_SENSIBLES = [
     },
 ]
 
-# Directorios cuyo listado queremos comprobar (que no muestren su contenido).
+# Directorios cuyo listado queremos comprobar (que no muestren su contenido)
 DIRECTORIOS_LISTADO = ["uploads/", "images/", "backup/", "files/", "admin/"]
 
-# Frases tipicas en una pagina de "listado de directorio" de un servidor.
+# Frases tipicas en una pagina de "listado de directorio" de un servidor
 INDICIOS_LISTADO = ["index of /", "directory listing for", "<title>index of"]
 
 
 def _ruta_aleatoria() -> str:
-    # Genera un nombre de ruta aleatorio que casi con seguridad no existe.
+    # Genera un nombre de ruta aleatorio que casi con seguridad no existe
     aleatorio = "".join(random.choices(string.ascii_lowercase + string.digits, k=16))
     return f"{aleatorio}-noexiste.html"
 
 
 def _pedir(url, opciones, logger):
-    # Hace un GET seguro y devuelve la respuesta, o None si falla.
+    # Hace un GET seguro y devuelve la respuesta, o None si falla
     try:
         return requests.get(
             url,
@@ -171,7 +171,7 @@ def _pedir(url, opciones, logger):
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    # Punto de entrada. Aplica estrategia de linea base y pruebas con firma.
+    # Punto de entrada Aplica estrategia de linea base y pruebas con firma
     objetivo = config["objetivo"]["url"].strip()
     if not objetivo.endswith("/"):
         objetivo += "/"
@@ -181,7 +181,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
     hallazgos: list[Hallazgo] = []
 
-    # --- Paso 1: linea base con una ruta inexistente ---
+    # Paso 1: linea base con una ruta inexistente
     url_base_falsa = urljoin(objetivo, _ruta_aleatoria())
     resp_falsa = _pedir(url_base_falsa, opciones, logger)
 
@@ -192,7 +192,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         )
         return hallazgos
 
-    # Como responde el servidor a algo que NO existe.
+    # Como responde el servidor a algo que NO existe
     codigo_inexistente = resp_falsa.status_code
     long_inexistente = len(resp_falsa.content)
     logger.info(
@@ -207,7 +207,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         if resp is None:
             continue
 
-        # Solo nos interesan respuestas 200 (accesible).
+        # Solo nos interesan respuestas 200 (accesible)
         if resp.status_code != 200:
             logger.debug(
                 f"[archivos_expuestos] {item['ruta']}: HTTP {resp.status_code} "
@@ -215,19 +215,19 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
             )
             continue
 
-        # ¿La respuesta es sospechosamente igual a la de "no existe"?
+        #La respuesta es sospechosamente igual a la de "no existe"?
         # Si el servidor respondio 200 tambien a la ruta falsa y con tamaño
-        # parecido, casi seguro es una pagina generica (SPA / 404 como 200).
+        # parecido, casi seguro es una pagina generica (SPA / 404 como 200)
         if codigo_inexistente == 200:
             diferencia = abs(len(resp.content) - long_inexistente)
-            if diferencia < 50:  # tamaños casi iguales -> misma pagina generica
+            if diferencia < 50:  # tamaños casi iguales > misma pagina generica
                 logger.debug(
                     f"[archivos_expuestos] {item['ruta']}: responde 200 pero "
                     f"identico a la pagina generica. Se descarta (falso positivo)."
                 )
                 continue
 
-        # Validacion por firma de contenido (si esta definida).
+        # Validacion por firma de contenido (si esta definida)
         firma = item.get("firma")
         if firma is not None:
             contenido = resp.text[:2000].lower()
@@ -239,7 +239,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
                 )
                 continue
 
-        # Si llegamos aqui, es un hallazgo real.
+        # Si llegamos aqui, es un hallazgo real
         hallazgos.append(Hallazgo(
             titulo=item["titulo"],
             categoria="A02",
@@ -292,8 +292,8 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
 
 
 # Prueba independiente:
-#     python3 -m modulos.archivos_expuestos
-# Se apoya en un servidor local de prueba que se lanza aparte.
+# python3 m modulos archivos_expuestos
+# Se apoya en un servidor local de prueba que se lanza aparte
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")

@@ -1,23 +1,23 @@
-# cabeceras_http.py - Modulo de deteccion (A02: Security Misconfiguration)
-# Revisa las cabeceras HTTP de seguridad que debe enviar un servidor web bien configurado.
-# Genera un Hallazgo por cada cabecera recomendada ausente (CSP, HSTS, X-Frame-Options, etc.).
-# Este modulo sirve de PLANTILLA basica para los demas modulos de deteccion.
+# cabeceras_http py Modulo de deteccion (A02: Security Misconfiguration)
+# Revisa las cabeceras HTTP de seguridad que debe enviar un servidor web bien configurado
+# Genera un Hallazgo por cada cabecera recomendada ausente (CSP, HSTS, X Frame Options, etc )
+# este módulo sirve de PLANTILLA basica para los demas modulos de deteccion
 
 import logging
 
 import requests
 
-# Import del modelo. Al ejecutarse via main.py (modo paquete), la ruta es
-# 'core.modelo_hallazgo'. Ver nota al final sobre como probar el modulo solo.
+# Import del modelo Al ejecutarse via main py (modo paquete), la ruta es
+# 'core modelo_hallazgo' Ver nota al final sobre como probar el modulo solo
 from core.modelo_hallazgo import Hallazgo
 
 
-# Nombre con el que este modulo se identifica en los hallazgos.
+# Nombre con el que este módulo se identifica en los hallazgos
 ORIGEN = "modulo_cabeceras_http"
 
 
-# Definicion de las cabeceras a revisar.
-# Cada entrada describe: severidad si falta, descripcion, recomendacion y CVSS.
+# Definicion de las cabeceras a revisar
+# Cada entrada describe: severidad si falta, descripcion, recomendacion y CVSS
 CABECERAS_SEGURIDAD = {
     "Content-Security-Policy": {
         "severidad": "alta",
@@ -99,8 +99,8 @@ CABECERAS_SEGURIDAD = {
 
 
 def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
-    # Punto de entrada del modulo (lo llama main.py).
-    # Hace peticion GET y devuelve lista de Hallazgos por cabeceras ausentes.
+    # Punto de entrada del modulo (lo llama main py)
+    # Hace peticion GET y devuelve lista de Hallazgos por cabeceras ausentes
     objetivo = config["objetivo"]["url"].strip()
     opciones = config.get("opciones", {})
     timeout = opciones.get("timeout", 10)
@@ -131,7 +131,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         logger.error(f"[cabeceras_http] No se pudo conectar con {objetivo}: {e}")
         return hallazgos
 
-    # Las claves de las cabeceras en requests son insensibles a mayusculas.
+    # Las claves de las cabeceras en requests son insensibles a mayusculas
     cabeceras_presentes = respuesta.headers
 
     # Revisar cada cabecera de seguridad
@@ -166,11 +166,11 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     return hallazgos
 
 
-# Prueba independiente del modulo.
-# Como este archivo importa 'core.modelo_hallazgo', para probarlo solo hay
+# Prueba independiente del modulo
+# Como este archivo importa 'core modelo_hallazgo', para probarlo solo hay
 # que ejecutarlo desde la raiz del proyecto asi:
-#     python3 -m modulos.cabeceras_http
-# Esto usa una config minima y una web publica real de ejemplo.
+# python3 m modulos cabeceras_http
+# Esto usa una config minima y una web publica real de ejemplo
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")

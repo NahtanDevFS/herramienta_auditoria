@@ -1,4 +1,4 @@
-# guarda como vuln.py y corre: python3 vuln.py
+# guarda como vuln py y corre: python3 vuln py
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
 import sqlite3

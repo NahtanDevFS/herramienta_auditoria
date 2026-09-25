@@ -1,4 +1,4 @@
-# modelo_hallazgo.py — Define la estructura de datos central del proyecto: la clase Hallazgo.
+# modelo_hallazgo py — Define la estructura de datos central del proyecto: la clase Hallazgo
 
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
@@ -15,7 +15,7 @@ class Severidad(str, Enum):
 
 
 class CategoriaOWASP(str, Enum):
-    # OWASP Top 10:2025.
+    # OWASP Top 10:2025
     A01 = "A01:2025 - Broken Access Control"
     A02 = "A02:2025 - Security Misconfiguration"
     A03 = "A03:2025 - Software Supply Chain Failures"
