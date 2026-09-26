@@ -47,7 +47,7 @@ class NavegadorAgente:
         try:
             self._browser = self._pw.chromium.launch(
                 headless=headless,
-                args=["--window-size=1280,1080", "--window-position=0,0"]
+                args=["--window-size=1280,1080", "--window-position=0,0", "--disable-gpu"]
             )
         except Exception as e:
             # si falla interfaz visual (sin wslg/display), cae a modo headless y continua
@@ -61,6 +61,7 @@ class NavegadorAgente:
                 raise
         self._context = self._browser.new_context(
             record_video_dir=carpeta_video,
+            record_video_size={"width": 1280, "height": 800},
             viewport={"width": 1280, "height": 800},
             ignore_https_errors=True,
         )
