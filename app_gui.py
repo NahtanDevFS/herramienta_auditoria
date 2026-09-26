@@ -166,16 +166,7 @@ def _render_monitor(expanded=True):
     # panel desplegable del monitor en vivo (novnc)
     import streamlit.components.v1 as components
     with st.expander("Monitor en Vivo (Escritorio Virtual)", expanded=expanded):
-        vnc_html = """
-        <div style="position:relative;width:100%;padding-bottom:56.25%;overflow:hidden;">
-            <iframe
-                src="http://localhost:8080/vnc.html?autoconnect=true&resize=scale"
-                style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;"
-                allowfullscreen>
-            </iframe>
-        </div>
-        """
-        components.html(vnc_html, height=700)
+        components.iframe("http://localhost:8080/vnc.html?autoconnect=true&resize=scale", height=700)
         st.caption("Puedes plegar o desplegar este panel con la flecha de arriba. "
                    "Si no ves imagen, verifica que mapeaste -p 8080:8080.")
 
