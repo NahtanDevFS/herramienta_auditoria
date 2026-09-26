@@ -1,6 +1,5 @@
-# crawler py modulo de reconocimiento (recon / base para a05)
-# rastrea el sitio objetivo para descubrir rutas, formularios y parametros
-# usa playwright (en un subproceso aislado) para renderizar js, con un fallback a HTTP puro
+# modulo de reconocimiento. rastrea rutas, formularios y parametros.
+# usa playwright aislado para render js, con fallback a http puro.
 
 import json
 import logging
@@ -35,9 +34,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     max_profundidad = conf_crawler.get("max_profundidad", MAX_PROFUNDIDAD_DEFECTO)
     render_js = conf_crawler.get("render_js", True)
 
-    # credenciales (si las hay): permiten rastrear tambien la zona autenticada, y
-    # asi descubrir rutas reales que no son visibles sin iniciar sesion (el login
-    # no enlaza a la zona privada) sin esto, en un spa solo se ve el login
+    # inyectar credenciales permite descubrir la zona privada inaccesible de forma anonima
     agente_cfg = config.get("agente_ia", {}) or {}
     aut_cfg = config.get("autenticacion", {}) or {}
     usuario = agente_cfg.get("usuario") or aut_cfg.get("usuario")
@@ -68,8 +65,8 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
                 f"parametros, {len(mapa)} pagina(s) con superficie de ataque.")
 
     _guardar_urls_para_sqlmap(urls_param, config, logger)
-    config["_mapa_sitio"] = mapa   # config es compartido > lo lee el agente
-    config["_rutas_descubiertas"] = sorted(rutas)  # para sembrar objetivos estables
+    config["_mapa_sitio"] = mapa   # compartido para lectura del agente
+    config["_rutas_descubiertas"] = sorted(rutas)  # siembra objetivos estables
     config["_endpoints_api"] = endpoints_api       # endpoints rest para el agente
     if endpoints_api:
         logger.info(f"[crawler] {len(endpoints_api)} endpoint(s) de API detectado(s).")
@@ -86,8 +83,7 @@ def _rastrear_con_subproceso(objetivo, max_paginas, max_prof, logger,
     try:
         cmd = [sys.executable, "-m", "modulos.crawler_worker",
                objetivo, str(max_paginas), str(max_prof), salida_json]
-        # las credenciales se pasan por variables de entorno (no por argv, que es
-        # visible en la lista de procesos)
+        # pasa credenciales por entorno para ocultarlas de la lista de procesos
         env = os.environ.copy()
         if usuario:
             env["CRAWLER_USER"] = usuario
@@ -235,9 +231,7 @@ def _construir_hallazgos(objetivo, rutas, formularios, urls_param, logger):
         if len(paths) > 40:
             resumen += f" ... (+{len(paths) - 40} mas)"
         hallazgos.append(Hallazgo(
-            # el conteo debe coincidir con las rutas realmente listadas (paths
-            # unicos), no con el total de urls crudas (que incluye duplicados por
-            # query/fragment) antes decia n pero listaba menos
+            # el conteo debe coincidir con rutas unicas reales, no con urls crudas con query
             titulo=f"Mapa del sitio: {len(paths)} ruta(s) descubierta(s)",
             categoria="A05", severidad="informativa", cvss=None,
             descripcion="Inventario de rutas descubiertas durante el rastreo (con "

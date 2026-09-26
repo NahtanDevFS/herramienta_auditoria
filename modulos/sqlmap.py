@@ -1,7 +1,4 @@
-# sqlmap py modulo de deteccion de inyecciones SQL (a05: injection)
-# envuelve sqlmap a diferencia de otros modulos, ataca activamente enviando payloads
-# usa una configuracion conservadora (level=1, risk=1) por defecto para no alterar datos
-# solo funciona si en config se definen urls con parametros (ej ?id=1)
+# envuelve sqlmap para detectar sqli activamente, usa config conservadora (a05)
 
 import logging
 import os
@@ -132,9 +129,7 @@ def _probar_url(ruta_binario, url, timeout, nivel, riesgo, user_agent, logger):
 
 
 def _parsear_salida(salida: str, url: str, logger):
-    # analiza la salida de sqlmap si detecto inyeccion (busca 'is vulnerable'),
-    # extrae parametro, tecnicas y dbms para construir un hallazgo critico
-    # ¿encontro inyeccion? buscamos las señales claras de sqlmap
+    # analiza salida de sqlmap y extrae datos para construir hallazgo critico
     vulnerable = (
         "is vulnerable" in salida
         or "identified the following injection point" in salida
@@ -207,10 +202,7 @@ def _parsear_salida(salida: str, url: str, logger):
     )
 
 
-# prueba independiente:
-# python3 m modulos sqlmap
-# importante: apunta a un objetivo vulnerable autorizado aqui usamos un
-# servidor local de prueba que debo tener corriendo (ver la conversacion)
+# prueba unitaria independiente usando servidor local vulnerable
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")

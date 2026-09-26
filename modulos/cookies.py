@@ -1,6 +1,4 @@
-# cookies py modulo de deteccion (a04: cryptographic failures)
-# revisa las cookies que envia la web y comprueba los flags de seguridad
-# genera un hallazgo por cada cookie con un flag ausente o mal puesto (secure, httponly, samesite)
+# modulo de deteccion: verifica flags de seguridad en cookies y genera hallazgos
 
 import logging
 
@@ -172,10 +170,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     return hallazgos
 
 
-# prueba independiente:
-# python3 m modulos cookies
-# se usa httpbin, que permite pedir que el servidor establezca una cookie
-# de prueba sin flags, para comprobar que el modulo la detecta
+# prueba unitaria independiente usando httpbin para detectar cookies sin flags
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")

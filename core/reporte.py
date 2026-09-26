@@ -1,18 +1,14 @@
-# reporte py consolida todos los hallazgos de la auditoria y los guarda
-# en esta fase genera un reporte en JSON con metadatos, resumen y lista de hallazgos
-# reutilizable para la posterior generacion de reportes HTML y PDF
+# consolida hallazgos y genera un reporte JSON con metadatos y resumen
 
 import json
 import os
 from datetime import datetime
 
-# importamos las clases del modelo el punto ( ) indica "del mismo paquete core"
-# si ejecutas este archivo directamente, mira el bloque __main__ al final
+# importa clases del modelo interno. para prueba unitaria, ver bloque __main__ al final.
 from core.modelo_hallazgo import Hallazgo, Severidad
 
 
-# orden de severidad de mas grave a menos grave
-# sirve para ordenar los hallazgos en el reporte: primero lo critico
+# orden de severidad para priorizar hallazgos en el reporte (lo critico primero)
 ORDEN_SEVERIDAD = {
     Severidad.CRITICA: 0,
     Severidad.ALTA: 1,
@@ -26,8 +22,7 @@ class Reporte:
     # acumula hallazgos durante la auditoria y los exporta al final
 
     def __init__(self, objetivo: str, nombre: str = ""):
-        # objetivo : URL de la web auditada
-        # nombre : nombre descriptivo del objetivo (para el reporte)
+        # objetivo: URL de la web auditada. nombre: descriptivo para el reporte.
         self.objetivo = objetivo
         self.nombre = nombre
         self.hallazgos: list[Hallazgo] = []
@@ -62,10 +57,7 @@ class Reporte:
         self.fin = datetime.now()
 
     def _resumen_por_severidad(self) -> dict:
-        # cuenta cuantos hallazgos hay de cada severidad
-        # devuelve algo como: {"critica": 1, "alta": 3, "media": 0, }
-        # arrancamos el conteo en 0 para todas las severidades, para que
-        # siempre aparezcan todas en el reporte aunque sean cero
+        # conteo de hallazgos por severidad. inicializa todas en 0 para que aparezcan siempre.
         conteo = {sev.value: 0 for sev in Severidad}
         for h in self.hallazgos:
             conteo[h.severidad.value] += 1
@@ -79,9 +71,7 @@ class Reporte:
         )
 
     def construir(self) -> dict:
-        # arma el diccionario completo del reporte, listo para volcar a JSON
-        # esta es la estructura central que luego consumira el reporte HTML/PDF
-        # si no se llamo a finalizar(), lo hacemos ahora para tener una duracion
+        # arma diccionario del reporte. llama a finalizar() si falta para tener duracion.
         if self.fin is None:
             self.finalizar()
 
@@ -111,9 +101,7 @@ class Reporte:
         return datos
 
     def guardar_json(self, carpeta: str = "resultados") -> str:
-        # guarda el reporte como archivo JSON dentro de la carpeta indicada
-        # el nombre del archivo incluye la fecha y hora devuelve la ruta
-        # crea la carpeta si no existe (exist_ok evita error si ya existe)
+        # guarda reporte JSON en carpeta (la crea si no existe) con fecha/hora en nombre.
         os.makedirs(carpeta, exist_ok=True)
 
         # nombre unico basado en la fecha: reporte_2026 07 16_0130 JSON
@@ -123,7 +111,7 @@ class Reporte:
 
         datos = self.construir()
 
-        # ensure_ascii=false para tildes indent=2 para formateo legible
+        # ensure_ascii=false mantiene tildes; indent=2 para formato legible
         with open(ruta, "w", encoding="utf-8") as f:
             json.dump(datos, f, ensure_ascii=False, indent=2)
 
@@ -147,8 +135,7 @@ class Reporte:
         print("=" * 55)
 
 
-# bloque de prueba: solo corre si ejecutas este archivo directamente
-# crea unos hallazgos de ejemplo, arma el reporte y lo guarda
+# bloque de prueba unitaria: crea hallazgos de ejemplo, genera y guarda reporte
 if __name__ == "__main__":
     print("Probando el modulo de reporte...\n")
 
@@ -157,8 +144,7 @@ if __name__ == "__main__":
         nombre="Prueba de reporte",
     )
 
-    # creamos unos hallazgos de ejemplo (desordenados a proposito, para
-    # comprobar que el reporte los ordena por severidad)
+    # hallazgos de prueba desordenados para verificar que el reporte los ordena
     rep.agregar(Hallazgo(
         titulo="Cabecera CSP ausente",
         categoria="A02",

@@ -1,6 +1,4 @@
-# metodos_http py modulo de deteccion (a01: broken access control)
-# comprueba metodos HTTP peligrosos (put, delete, trace) via options
-# prueba vulnerabilidades de path traversal intentando leer archivos del sistema
+# detecta metodos http peligrosos y vulnerabilidades de path traversal (a01)
 
 import logging
 from urllib.parse import urljoin, urlparse

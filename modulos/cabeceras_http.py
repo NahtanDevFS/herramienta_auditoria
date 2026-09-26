@@ -1,7 +1,4 @@
-# cabeceras_http py modulo de deteccion (a02: security misconfiguration)
-# revisa las cabeceras HTTP de seguridad que debe enviar un servidor web bien configurado
-# genera un hallazgo por cada cabecera recomendada ausente (csp, hsts, x frame options, etc )
-# este módulo sirve de plantilla basica para los demas modulos de deteccion
+# revisa cabeceras http de seguridad ausentes (a02) y sirve de plantilla basica
 
 import logging
 
@@ -166,11 +163,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     return hallazgos
 
 
-# prueba independiente del modulo
-# como este archivo importa 'core modelo_hallazgo', para probarlo solo hay
-# que ejecutarlo desde la raiz del proyecto asi:
-# python3 m modulos cabeceras_http
-# esto usa una config minima y una web publica real de ejemplo
+# prueba unitaria independiente: lanza escaneo contra example.com
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")

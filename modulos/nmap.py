@@ -1,6 +1,4 @@
-# nmap py modulo de escaneo de puertos (a02: security misconfiguration)
-# detecta puertos abiertos y servicios de riesgo expuestos (bases de datos, rdp, ftp)
-# usa nmap sin privilegios ( st) y parsea la salida xml nativa
+# detecta puertos abiertos y servicios expuestos usando nmap sin privilegios (a02)
 
 import logging
 import os
@@ -266,9 +264,7 @@ def _parsear_xml(ruta_xml: str, logger) -> list[dict]:
     raiz = arbol.getroot()
 
     puertos = []
-    # estructura: <nmaprun><host><ports><port portid="80" protocol="tcp">
-    # <state state="open"/>
-    # <service name="HTTP" product="nginx" version="1 18"/>
+    # estructura xml: host > ports > port > state / service
     for host_el in raiz.findall("host"):
         ports_el = host_el.find("ports")
         if ports_el is None:
@@ -302,9 +298,7 @@ def _borrar(ruta: str) -> None:
         pass
 
 
-# prueba independiente:
-# python3 m modulos nmap
-# escanea scanme nmap org, que autoriza explicitamente ser escaneado
+# prueba unitaria independiente escaneando scanme.nmap.org
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")

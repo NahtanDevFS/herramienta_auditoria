@@ -1,6 +1,4 @@
-# autenticacion py modulo de deteccion (a07: authentication failures)
-# analiza la postura de seguridad de la autenticacion sin hacer fuerza bruta
-# comprueba rate limiting, enumeracion de usuarios, transmision y cookies
+# evalua la seguridad de autenticacion (a07) verificando rate limit y enumeracion
 
 import logging
 import time
@@ -295,9 +293,7 @@ def _revisar_cookie_sesion(sesion, url, logger):
     return hallazgos
 
 
-# prueba independiente:
-# python3 m modulos autenticacion
-# requiere un objetivo con login autorizado configurado
+# prueba unitaria independiente usando un objetivo con login autorizado
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")

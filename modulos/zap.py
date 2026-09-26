@@ -1,6 +1,4 @@
-# ZAP py modulo de escaneo con OWASP ZAP (daemon)
-# integra ZAP mediante su API HTTP: levanta el daemon, ejecuta spider/active scan, recolecta alertas y lo apaga de forma
-# segura
+# escanea con owasp zap (daemon) usando su api http para spider/active scan
 
 import logging
 import os
@@ -152,10 +150,7 @@ def _lanzar_daemon(ruta_zap, puerto, logger):
         "-host", "127.0.0.1",
         "-port", str(puerto),
         "-config", f"api.key={API_KEY}",
-        # permitir peticiones de la API con cualquier host header la libreria
-        # zapv2 envia las peticiones a 'HTTP://ZAP/ ', y ZAP 2 17 las rechaza
-        # por defecto ('host header ZAP not permitted') estas dos lineas le
-        # dicen a ZAP que acepte esas peticiones
+        # permite cualquier host header para la api, necesario para zap 2.17+
         "-config", "api.addrs.addr.name=.*",
         "-config", "api.addrs.addr.regex=true",
     ]
@@ -327,9 +322,7 @@ def _apagar_daemon(proceso_zap, logger):
         logger.warning(f"[zap] Problema al apagar ZAP: {e}")
 
 
-# prueba independiente:
-# python3 m modulos ZAP
-# requiere ZAP instalado y la ruta correcta a ZAP sh
+# prueba unitaria independiente requiriendo ruta correcta al binario de zap
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")

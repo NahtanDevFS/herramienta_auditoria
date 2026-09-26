@@ -1,6 +1,4 @@
-# ventana_pensamiento py ventana flotante (tkinter) del hilo de pensamiento del agente
-# corre en un subproceso y lee eventos en tiempo real para mostrar razonamientos
-# uso interno: lanzado por emisorpensamiento
+# ventana flotante (tkinter) para mostrar razonamientos en tiempo real
 
 import json
 import os
@@ -16,14 +14,9 @@ def _main_ventana(archivo):
 
     root = tk.Tk()
     root.title("Razonamiento del agente")
-    # quitamos la decoracion (barra de titulo/bordes) directamente desde tk en vez
-    # de depender de la regla de fluxbox (~/ fluxbox/apps), que no matchea de forma
-    # fiable la clase de la ventana tk asi la ventana ocupa exactamente su
-    # geometria y no se sale de la pantalla
+    # quitamos la decoracion directamente desde tk para evitar problemas con fluxbox
     root.overrideredirect(True)
-    # posicion calculada desde el ancho real de la pantalla (no valores fijos), para
-    # que la ventana quede pegada a la derecha pero siempre dentro del area visible,
-    # con margen, sin desbordarse (aunque cambie la resolucion del escritorio)
+    # calculamos posicion para pegarla a la derecha sin desbordar la pantalla
     root.update_idletasks()
     sw = root.winfo_screenwidth()
     sh = root.winfo_screenheight()
@@ -38,9 +31,7 @@ def _main_ventana(archivo):
     tk.Label(root, text="Razonamiento del agente en vivo", bg="#0d1117",
              fg="#58a6ff", font=("Segoe UI", 15, "bold")).pack(pady=10)
 
-    # wrap=char asegura que urls y payloads largos sin espacios (p ej
-    # HTTP://host docker internal:5173/admin) tambien se ajusten al ancho y no
-    # se desborden horizontalmente
+    # wrap=char asegura que textos largos sin espacios no se desborden horizontalmente
     txt = scrolledtext.ScrolledText(root, bg="#0d1117", fg="#c9d1d9",
                                     font=("Consolas", 12), wrap=tk.CHAR,
                                     borderwidth=0, padx=10, pady=10)
@@ -85,7 +76,7 @@ def _main_ventana(archivo):
 
 
 class EmisorPensamiento:
-    # lanza la ventana en un subproceso y le envia eventos escribiendo en un archivo
+    # lanza la ventana y envia eventos por archivo
 
     def __init__(self, activo=True, logger=None):
         self.activo = bool(activo)

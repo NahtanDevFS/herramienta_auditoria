@@ -1,6 +1,4 @@
-# crawler_worker py worker de rastreo con navegador (subproceso aislado)
-# playwright no puede correr dentro del bucle de asyncio de streamlit
-# todo el rastreo visual se ejecuta aqui de forma aislada, lanzado por crawler py
+# worker aislado para rastreo visual (playwright no soporta el bucle de streamlit)
 
 import json
 import sys
@@ -71,14 +69,13 @@ def _descartar_overlays(page):
 
 
 def _ruta_spa(url):
-    # identidad de una vista: en spas es el fragmento (#/login) si no, el path
+    # identidad de vista: el fragmento en spas o el path en sitios clasicos
     p = urlparse(url)
     return p.fragment or p.path or "/"
 
 
 def _iniciar_sesion(page, objetivo, usuario, contrasena):
-    # inicia sesion antes de rastrear, para poder ver la zona privada (rutas
-    # reales que el login no enlaza) prueba el objetivo y rutas de login comunes
+    # inicia sesion antes de mapear para descubrir rutas exclusivas de la zona privada
     origen = _origen(objetivo)
     candidatos = [objetivo] + [origen + r for r in
                                ("/login", "/signin", "/admin", "/#/login")]
@@ -118,8 +115,7 @@ def _iniciar_sesion(page, objetivo, usuario, contrasena):
 
 
 def _compactar_mapa(mapa, maximo=15):
-    # deduplica por ruta de spa (no por URL completa) y prioriza login/busqueda
-    # asi /login, /admin#/login y /administrator#/login (misma vista) cuentan una vez
+    # deduplica vistas de spa priorizando aquellas con login o formularios
     vistos, salida = set(), []
     for e in sorted(mapa, key=lambda x: (not x["tiene_login"], not x["tiene_busqueda"],
                                          not x.get("tiene_formulario", False))):
@@ -154,9 +150,7 @@ def rastrear(objetivo, max_paginas, max_prof, usuario=None, contrasena=None):
     page = ctx.new_page()
     page.set_default_timeout(8000)
 
-    # escuchar el trafico: la spa llama a su API por detras (fetch/xhr) capturamos
-    # esas urls, que no aparecen como enlaces normales es la forma fiable de
-    # descubrir la superficie de API sin adivinar rutas
+    # intercepta fetch/xhr en background para mapear endpoints de api reales
     def _capturar_peticion(req):
         try:
             u = req.url
@@ -171,8 +165,7 @@ def rastrear(objetivo, max_paginas, max_prof, usuario=None, contrasena=None):
 
     page.on("request", _capturar_peticion)
 
-    # si hay credenciales, iniciar sesion antes de rastrear: asi el dom ya
-    # autenticado enlaza a las rutas reales de la zona privada
+    # si hay credenciales, autentica primero para que el dom revele las rutas privadas
     if usuario and contrasena:
         try:
             if _iniciar_sesion(page, objetivo, usuario, contrasena):
@@ -233,9 +226,7 @@ def rastrear(objetivo, max_paginas, max_prof, usuario=None, contrasena=None):
                     })
             hay_busqueda = info.get("buscadores", 0) > 0
 
-            # si hay un buscador, hacemos una busqueda de prueba para disparar la
-            # llamada a la API de busqueda (asi el listener la captura) es donde
-            # suelen vivir inyecciones, y no se captura si nadie busca
+            # ejecuta busqueda de prueba para que el listener capture la llamada a la api
             if hay_busqueda:
                 try:
                     campo = page.locator(

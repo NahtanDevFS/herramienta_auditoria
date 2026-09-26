@@ -1,9 +1,7 @@
 #!/bin/bash
-# =============================================================================
 # start.sh
 # Inicia el entorno de escritorio virtual (Xvfb + Fluxbox + x11vnc + noVNC)
 # y luego arranca la aplicación de Streamlit.
-# =============================================================================
 
 # 1. Iniciar Xvfb (Virtual Framebuffer)
 # Crea un display virtual en el puerto :0 con resolucion 1920x1080

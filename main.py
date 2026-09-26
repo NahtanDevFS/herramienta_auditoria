@@ -1,14 +1,4 @@
-# main py
-# punto de entrada por linea de comandos de la herramienta de auditoria
-# se encarga de:
-# 1 leer la configuracion (config yaml)
-# 2 verificar que exista autorizacion para auditar (salvaguarda etica/legal)
-# 3 preparar el sistema de logging
-# 4 delegar la ejecucion a auditoria ejecutar_auditoria()
-# 5 guardar el reporte y generar el informe HTML/PDF
-# uso:
-# python3 main py
-# python3 main py config otra_config yaml
+# punto de entrada: lee config, valida autorizacion, configura logging y delega ejecucion
 
 import argparse
 import logging
@@ -40,8 +30,7 @@ def cargar_config(ruta: str) -> dict:
 
 
 def validar_config(config: dict) -> None:
-    # comprueba que la configuracion tenga lo minimo necesario para operar
-    # y que se cumplan las salvaguardas antes de tocar el objetivo
+    # verifica la configuracion basica y las salvaguardas de autorizacion
     objetivo = config.get("objetivo", {})
     url = objetivo.get("url", "").strip()
 

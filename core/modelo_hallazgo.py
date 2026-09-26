@@ -1,5 +1,4 @@
-# modelo_hallazgo py — define la estructura de datos central del proyecto: la clase hallazgo
-
+# define la estructura de datos central del proyecto: la clase hallazgo
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum

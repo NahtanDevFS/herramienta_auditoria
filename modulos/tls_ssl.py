@@ -1,7 +1,5 @@
-# tls_ssl py modulo de deteccion (a04: cryptographic failures)
-# analiza la configuracion tls/ssl usando sslyze detecta protocolos obsoletos,
-# certificados caducados o no confiables, y firmas debiles
-# solo actua sobre objetivos HTTPS
+# analiza configuracion tls/ssl usando sslyze (a04: cryptographic failures)
+# detecta protocolos obsoletos, certificados caducados y firmas debiles
 
 import logging
 from datetime import datetime, timezone
@@ -9,9 +7,7 @@ from urllib.parse import urlparse
 
 from core.modelo_hallazgo import Hallazgo
 
-# sslyze se importa dentro de las funciones para que, si no esta instalado,
-# el error se maneje con un mensaje claro en vez de romper todo el programa
-# al arrancar
+# sslyze se importa dinamicamente para evitar caidas si no esta instalado
 
 ORIGEN = "modulo_tls_ssl"
 
@@ -164,12 +160,7 @@ def _revisar_certificado(attempts, hostname, objetivo, logger) -> list[Hallazgo]
     dep = deployments[0]
     leaf = dep.received_certificate_chain[0]
 
-    # confianza de la cadena
-    # path_validation_results valida el certificado frente a varios almacenes
-    # de confianza (mozilla, apple, windows ) consideramos el certificado
-    # no confiable solo si falla en todos y ademas los errores indican un
-    # problema real del certificado (no un trust store desactualizado en la
-    # maquina que ejecuta la auditoria)
+    # verifica certificado fallido solo si es problema real y no store desactualizado
     validaciones = dep.path_validation_results
     confiable = any(v.was_validation_successful for v in validaciones)
 
@@ -226,9 +217,7 @@ def _revisar_certificado(attempts, hostname, objetivo, logger) -> list[Hallazgo]
                 f"Errores: {errores[:2]}"
             )
 
-    # coincidencia con el hostname
-    # usamos la libreria cryptography para comprobar si el hostname esta en
-    # el certificado (cn o san)
+    # verifica si hostname coincide con el certificado usando cryptography
     if not _hostname_coincide(leaf, hostname):
         hallazgos.append(Hallazgo(
             titulo="El certificado no coincide con el hostname",
@@ -355,9 +344,7 @@ def _coincide_con_comodin(patron: str, hostname: str) -> bool:
     return False
 
 
-# prueba independiente:
-# python3 m modulos tls_ssl
-# escanea un sitio HTTPS real
+# prueba unitaria independiente escaneando un sitio https real
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")

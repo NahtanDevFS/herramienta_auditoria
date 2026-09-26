@@ -1,9 +1,4 @@
-# test unitario para las funciones modificadas en agente_pentesting py
-# verifica:
-# _construir_objetivos: modo normal vs autenticado
-# _seleccionar_endpoints_api: inyeccion de endpoints privados autenticados
-# _firma_hallazgo: deduplicacion
-# heuristica a01: solo endpoints sensibles
+# test unitario de agente_pentesting: modo normal vs autenticado, inyeccion api y firmas
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

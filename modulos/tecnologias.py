@@ -1,7 +1,4 @@
-# tecnologias py modulo de deteccion de tecnologias (a03: software supply chain)
-# identifica servidor, lenguaje, framework, cms, librerias js y sus versiones
-# combina wappalyzer, cabeceras HTTP, meta generator y rutas de librerias js
-# util para encontrar componentes con versiones vulnerables
+# identifica tecnologias y versiones mediante cabeceras, meta generator, js y wappalyzer
 
 import logging
 import re
@@ -15,9 +12,7 @@ from core.modelo_hallazgo import Hallazgo
 ORIGEN = "modulo_tecnologias"
 
 
-# patrones para extraer libreria + version de las rutas de scripts y estilos
-# los desarrolladores suelen dejar la version en el nombre del archivo o en la
-# URL del cdn, lo que es una fuente de versiones muy fiable para a06
+# extrae versiones de js/css desde el nombre de archivo o url del cdn
 
 PATRONES_JS = [
     # archivo local con version: /js/jquery 3 6 0 min js o angular 1 8 2 js
@@ -250,10 +245,7 @@ def _analizar_wappalyzer(objetivo, inventario, logger) -> None:
         warnings.filterwarnings("ignore")
         from Wappalyzer import Wappalyzer, WebPage
     except Exception as e:
-        # capturamos cualquier error de import, no solo importerror la libreria
-        # python wappalyzer esta desactualizada y en versiones recientes de
-        # python (3 12+) su import puede fallar con otros tipos de error
-        logger.info(
+        # ignora fallos de wappalyzer, ya que en python 3.12+ su import falla
             f"[tecnologias] Wappalyzer no esta disponible ({type(e).__name__}: "
             f"{e}). Se usa la deteccion por cabeceras y meta, que es la mas "
             f"fiable para versiones. El inventario sera algo mas limitado."

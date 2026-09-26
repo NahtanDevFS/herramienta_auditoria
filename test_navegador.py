@@ -1,17 +1,4 @@
-# test_navegador py — prueba de capa 1 (modo navegador) sin tocar el agente principal
-# corre un mini agente que usa solo las herramientas de navegador (navegar,
-# probar_login, tomar_captura) para intentar un bypass de autenticacion por
-# inyeccion SQL en el login de OWASP juice shop, con mi modelo local
-# al terminar veras:
-# las capturas en resultados/capturas/
-# el video en resultados/video/
-# requisitos previos:
-# 1) ollama corriendo con mi modelo (jonathanfs/pentest OWASP o pentest OWASP)
-# 2) juice shop corriendo: docker run rm p 3000:3000 bkimminich/juice shop
-# 3) pip install playwright ollama
-# playwright install chromium
-# playwright install deps # en wsl/ubuntu, con sudo
-# ejecuta: python test_navegador py
+# mini agente para probar herramientas del navegador e intentar sqli bypass en owasp juice shop
 
 import json
 import logging
@@ -26,8 +13,7 @@ MODELO = "jonathanFS/pentest-owasp"     # o "pentest OWASP"
 HOST = "http://localhost:11434"
 LIMITE_ACCIONES = 6
 
-# ponlo en false para ver el navegador en vivo (requiere wslg en win11)
-# en true (por defecto) corre oculto pero igual graba video y capturas
+# false muestra navegador en vivo, true graba video/capturas en fondo
 HEADLESS = True
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s",

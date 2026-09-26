@@ -1,7 +1,4 @@
-# archivos_expuestos py modulo de deteccion de archivos expuestos (a02: security misconfiguration)
-# busca archivos sensibles accesibles ( git/head, env, backups, configs)
-# estrategia anti falsos positivos: pide una ruta inexistente para usarla de
-# referencia y comprueba firmas en el contenido descargado
+# detecta archivos expuestos (a02) usando rutas, firmas y lineas base
 
 import logging
 import random
@@ -16,9 +13,7 @@ from core.modelo_hallazgo import Hallazgo
 ORIGEN = "modulo_archivos_expuestos"
 
 
-# rutas sensibles a comprobar
-# define la ruta, severidad, impacto y una 'firma' de texto obligatoria
-# para descartar falsos positivos que responden con HTTP 200 (ej paginas 404 custom)
+# rutas sensibles a verificar con firmas para evitar falsos positivos
 RUTAS_SENSIBLES = [
     {
         "ruta": ".git/HEAD",
@@ -215,9 +210,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
             )
             continue
 
-        # la respuesta es sospechosamente igual a la de "no existe"?
-        # si el servidor respondio 200 tambien a la ruta falsa y con tamaño
-        # parecido, casi seguro es una pagina generica (spa / 404 como 200)
+        # detecta falsos positivos comparando con respuesta base 200
         if codigo_inexistente == 200:
             diferencia = abs(len(resp.content) - long_inexistente)
             if diferencia < 50:  # tamaños casi iguales > misma pagina generica
@@ -291,9 +284,7 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
     return hallazgos
 
 
-# prueba independiente:
-# python3 m modulos archivos_expuestos
-# se apoya en un servidor local de prueba que se lanza aparte
+# prueba unitaria independiente, requiere servidor de prueba local
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")

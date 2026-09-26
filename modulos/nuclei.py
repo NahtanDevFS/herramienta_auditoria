@@ -1,7 +1,5 @@
-# nuclei py modulo de escaneo basado en plantillas nuclei (a02, a03, a05, a06, etc)
-# envuelve el binario externo 'nuclei' para detectar vulnerabilidades conocidas (cve), exposiciones y malas
-# configuraciones
-# solo escanea severidades media, alta y critica por defecto para ahorrar tiempo
+# modulo escaneo: usa plantillas nuclei para vulnerabilidades conocidas y cve
+# por defecto solo procesa severidades media, alta y critica
 
 import json
 import logging
@@ -16,9 +14,7 @@ ORIGEN = "modulo_nuclei"
 # nombre del binario debe estar en el path (o en ~/go/bin con el path ajustado)
 BINARIO = "nuclei"
 
-# longitud maxima de la descripcion algunas plantillas de nuclei (sobre todo
-# las de cve) traen descripciones enormes que listan decenas de productos
-# afectados, lo que arruinaria la legibilidad del reporte final
+# limite descripcion: evita textos enormes de plantillas cve que arruinan la lectura
 MAX_DESCRIPCION = 400
 
 # severidades que escaneamos por defecto (las relevantes para un informe)
@@ -178,9 +174,7 @@ def _parsear_linea(linea: str, objetivo: str, logger) -> Hallazgo | None:
         "Deteccion realizada por la plantilla de Nuclei "
         f"'{datos.get('template-id', 'desconocida')}'."
     )
-    # truncar descripciones desmesuradas (habitual en plantillas de cve) para
-    # que el reporte final sea legible se corta en el ultimo punto antes del
-    # limite, para no partir una frase por la mitad
+    # trunca descripciones desmesuradas de plantillas cve sin romper la ultima frase
     if len(descripcion) > MAX_DESCRIPCION:
         recorte = descripcion[:MAX_DESCRIPCION]
         ultimo_punto = recorte.rfind(". ")
@@ -256,9 +250,7 @@ def _parsear_linea(linea: str, objetivo: str, logger) -> Hallazgo | None:
     )
 
 
-# prueba independiente:
-# python3 m modulos nuclei
-# requiere tener nuclei instalado escanea un objetivo publico de prueba
+# prueba unitaria independiente: requiere nuclei instalado y escanea objetivo publico
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")

@@ -1,6 +1,4 @@
-# auditoria py
-# contiene la funcion central que ejecuta una auditoria a partir de un dict de config
-# se separa de main py para reutilizar la misma logica en cli y gui
+# ejecuta la auditoria desde dict config, reutilizable en cli/gui
 
 import logging
 import os
@@ -9,9 +7,7 @@ from core.reporte import Reporte
 from core.riesgo import MotorRiesgo
 
 
-# lista de (clave_en_config, nombre_modulo) en el orden de ejecucion
-# el crawler va antes que sqlmap para poder alimentarlo con urls
-# cada entrada se importa de forma perezosa (solo si el modulo esta activo)
+# orden de ejecucion de modulos importados perezosamente
 ORDEN_MODULOS = [
     ("cabeceras_http", "cabeceras_http"),
     ("cookies", "cookies"),

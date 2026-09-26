@@ -1,6 +1,4 @@
-# reporte_html py generador de reporte HTML/PDF (fase 6)
-# toma el reporte consolidado y produce un informe en HTML y PDF
-# usa jinja2 para la plantilla y weasyprint para convertir HTML a PDF
+# generador de reporte HTML/PDF con jinja2 y weasyprint (fase 6)
 # se llama con: generar(datos_reporte, carpeta, formatos, logger)
 
 import logging
@@ -31,8 +29,7 @@ COLOR_NIVEL = {
 }
 
 
-# plantilla HTML del informe (jinja2) el css esta embebido para que el
-# archivo sea autocontenido y weasyprint lo renderice bien a PDF
+# plantilla HTML embebida con CSS para exportacion autonoma a PDF
 PLANTILLA = env.from_string(r"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -255,11 +252,7 @@ su valoracion y las lineas que quedarian pendientes.</p>
 
 
 def generar(datos: dict, carpeta: str, formatos: list, logger: logging.Logger) -> list:
-    # genera el informe en los formatos pedidos
-    # datos : dict de reporte construir() (metadatos, hallazgos, analisis_riesgo)
-    # carpeta : donde guardar los archivos
-    # formatos : lista con 'HTML' y/o 'PDF'
-    # devuelve la lista de rutas de archivos generados
+    # genera el informe (HTML/PDF) y retorna las rutas de los archivos creados
     os.makedirs(carpeta, exist_ok=True)
     generados = []
 
@@ -343,9 +336,7 @@ def _preparar_contexto(datos: dict) -> dict:
     }
 
 
-# prueba independiente:
-# python3 m core reporte_html
-# genera un informe de ejemplo con datos ficticios
+# prueba unitaria independiente: genera informe de ejemplo con datos ficticios
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     log = logging.getLogger("prueba")

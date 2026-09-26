@@ -54,13 +54,9 @@ def configurar_logger():
     return logger
 
 
-# ejecucion de la auditoria en un proceso aparte (cancelable con "detener")
-# la auditoria hace llamadas bloqueantes (ollama, playwright) que streamlit no
-# puede interrumpir por eso corre en su propio proceso, que podemos matar por
-# completo (incluyendo chromium y la ventana de razonamiento) al pulsar detener
+# ejecuta la auditoria en un proceso hijo para poder cancelarla (matando chromium/ollama)
 def _worker_auditoria(config, ruta_log, ruta_estado, cola):
-    # corre en el proceso hijo escribe log y progreso en archivos que la ui lee,
-    # y deja el resultado final en la cola
+    # escribe log y progreso para la ui y envia resultado final por la cola
     os.setsid()  # nuevo grupo de procesos > permite matar todo el arbol al detener
     logger = logging.getLogger("auditoria_worker")
     logger.setLevel(logging.INFO)
@@ -95,10 +91,7 @@ def _worker_auditoria(config, ruta_log, ruta_estado, cola):
         except Exception:
             pass
 
-    # si el agente dejo el navegador abierto, el proceso no debe terminar: playwright
-    # cierra chromium al morir su proceso nos quedamos vivos (el resultado ya se
-    # entrego por la cola) hasta que el proceso principal nos mate (killpg) al
-    # iniciar otra auditoria o al pulsar detener
+    # si hay navegador abierto, mantenemos el proceso vivo para no cerrar chromium
     if config.get("_navegador_abierto") is not None:
         import time as _t
         while True:
@@ -162,8 +155,7 @@ def _limpiar_estado_auditoria():
 
 
 def _detener_auditoria():
-    # mata el worker (y su grupo: chromium + ventana de razonamiento) y cierra
-    # tambien cualquier navegador que hubiera quedado abierto de antes
+    # mata el worker y cierra cualquier navegador abierto previo
     _matar_proceso(st.session_state.get("proc"))
     _cerrar_navegador_abierto()
     _limpiar_estado_auditoria()
@@ -171,8 +163,7 @@ def _detener_auditoria():
 
 
 def _render_monitor(expanded=True):
-    # panel plegable del monitor en vivo (novnc) se muestra durante la auditoria
-    # y tambien despues (el usuario decide si plegarlo), no desaparece al terminar
+    # panel desplegable del monitor en vivo (novnc)
     import streamlit.components.v1 as components
     with st.expander("Monitor en Vivo (Escritorio Virtual)", expanded=expanded):
         vnc_html = """
@@ -191,8 +182,7 @@ def _render_monitor(expanded=True):
 
 @st.fragment(run_every="1s")
 def _panel_en_curso():
-    # se auto refresca cada segundo sin recargar el resto de la pagina (por eso el
-    # iframe del monitor en vivo, que va fuera del fragmento, no parpadea)
+    # se refresca cada segundo sin recargar el resto de la pagina (evita parpadeo de novnc)
     proc = st.session_state.get("proc")
     cola = st.session_state.get("cola")
     ruta_log = st.session_state.get("ruta_log")
@@ -246,8 +236,7 @@ def _panel_en_curso():
             st.session_state["video_agente"] = resultado.get("video")
         else:
             st.session_state["error_auditoria"] = resultado.get("error", "desconocido")
-        # si se dejo el navegador abierto, el worker sigue vivo manteniendolo se
-        # conserva su handle para poder cerrarlo al iniciar otra auditoria/detener
+        # mantiene el handle del navegador abierto para cerrarlo despues
         cfg_ag = (st.session_state.get("config_auditoria", {}) or {}).get("agente_ia", {})
         if cfg_ag.get("mantener_navegador_abierto") and proc is not None and proc.is_alive():
             st.session_state["proc_navegador"] = proc
@@ -375,8 +364,7 @@ if lanzar:
         st.error("Debes confirmar la autorizacion para auditar.")
         st.stop()
 
-    # se arma la config y se guarda el proceso de auditoria se lanza en la
-    # siguiente pasada (bloque "en curso"), en un proceso aparte cancelable
+    # lanza proceso de auditoria en segundo plano cancelable
     st.session_state.config_auditoria = {
         "objetivo": {"url": url, "nombre": nombre, "autorizacion_confirmada": True},
         "modulos": modulos_activos,
@@ -407,8 +395,7 @@ if lanzar:
     }
     st.session_state.mostrar_monitor = bool(
         modulos_activos.get("agente_ia") and usar_navegador and abrir_ventana)
-    # limpiar resultados/errores de la auditoria anterior para que no queden
-    # visibles al arrancar una nueva
+    # limpia resultados de auditoria previa
     for k in ("datos_reporte", "rutas_informe", "video_agente", "error_auditoria"):
         st.session_state.pop(k, None)
     st.session_state.auditoria_en_curso = True
@@ -424,13 +411,11 @@ if st.session_state.get("auditoria_en_curso", False):
     # panel de progreso + terminal en vivo (arriba)
     _panel_en_curso()
 
-    # monitor en vivo (debajo, como estaba) va fuera del fragmento auto refrescante
-    # para que el iframe de novnc no se recargue en cada actualizacion del progreso
+    # monitor fuera del fragmento para evitar recargar iframe en cada avance
     if st.session_state.get("mostrar_monitor"):
         _render_monitor(expanded=True)
 
-# tras terminar la auditoria, mantener el monitor en vivo disponible (plegable):
-# no debe desaparecer al finalizar el usuario decide si ocultarlo
+# mantiene monitor disponible despues de terminar la auditoria
 elif st.session_state.get("mostrar_monitor"):
     _render_monitor(expanded=True)
 
