@@ -56,21 +56,66 @@ Si usas la **instalación manual (Opción B)**, necesitas además:
 
 ## Instalación
 
-### Opción A: Docker (recomendada)
+Hay **dos decisiones independientes**: cómo corres la herramienta (Docker o manual)
+y qué modelo usa el agente (en la nube o local con Ollama). De ahí salen estas tres
+formas de ponerla en marcha. **Elige una:**
 
-Ejecuta la herramienta con todas sus dependencias (Nmap, ZAP, SQLmap, Playwright,
-etc.) en un contenedor aislado, usando tu instalación local de Ollama.
+- **Opción A: Docker + modelo en la nube.** La más fácil, no necesitas Ollama.
+- **Opción B: Docker + modelo local (Ollama).** Todo corre en tu máquina.
+- **Opción C: instalación manual (sin Docker).** Para desarrollo.
 
-**Requisitos previos:** tener instalados
-[Docker Desktop](https://www.docker.com/products/docker-desktop/) y
-[Ollama](https://ollama.com), y ambos abiertos.
-
-Sigue los pasos **en orden**. Todos los comandos se pegan en una terminal:
+Todos los comandos se pegan en una terminal, **cada uno en una sola línea** (no los
+partas):
 
 - **En Windows:** abre **PowerShell** (menú Inicio, escribe `PowerShell`, Enter).
 - **En Mac/Linux:** abre la **Terminal**.
 
-Pega **cada comando completo** en una sola línea, no lo partas.
+Al terminar, la herramienta queda en http://localhost:8501 (interfaz) y en
+http://localhost:8080/vnc.html (monitor en vivo). Para detenerla, en su terminal
+pulsa `Ctrl + C`.
+
+### Opción A: Docker + modelo en la nube (la más fácil)
+
+La herramienta corre en Docker y el modelo de IA vive en un endpoint en la nube
+(compatible con OpenAI: vLLM en Modal, Together, Groq). **No necesitas Ollama.**
+
+Requisitos: [Docker Desktop](https://www.docker.com/products/docker-desktop/) y los
+dos datos de tu endpoint: su **Base URL** (termina en `/v1`) y su **API key**.
+
+#### 1. Clona el repositorio y entra a la carpeta
+
+```bash
+git clone https://github.com/NahtanDevFS/herramienta_auditoria.git
+```
+
+```bash
+cd herramienta_auditoria
+```
+
+#### 2. Construye la imagen (solo la primera vez, tarda varios minutos)
+
+```bash
+docker build -t auditoria_web .
+```
+
+#### 3. Levanta la herramienta (pon tu Base URL y tu API key)
+
+```bash
+docker run --rm -it -p 8501:8501 -p 8080:8080 --add-host=host.docker.internal:host-gateway -e LLM_BASE_URL=https://TU-ENDPOINT/v1 -e LLM_API_KEY=TU_CLAVE auditoria_web
+```
+
+#### 4. Abre y configura
+
+Entra a http://localhost:8501, activa el agente de IA y elige **"Nube"**. La Base
+URL y la API key ya vienen de las variables de entorno del paso 3. La clave nunca
+se guarda en el código.
+
+### Opción B: Docker + modelo local (Ollama)
+
+La herramienta y el modelo corren en tu propia máquina. Requiere Ollama.
+
+Requisitos: [Docker Desktop](https://www.docker.com/products/docker-desktop/) y
+[Ollama](https://ollama.com), ambos abiertos.
 
 #### 1. Clona el repositorio y entra a la carpeta
 
@@ -124,21 +169,19 @@ PowerShell, CMD y Terminal).
 docker run --rm -it -p 8501:8501 -p 8080:8080 --add-host=host.docker.internal:host-gateway -e OLLAMA_HOST=http://host.docker.internal:11434 auditoria_web
 ```
 
-#### 6. Abre la herramienta en tu navegador
+#### 6. Abre y configura
 
-- **Interfaz gráfica:** http://localhost:8501
-- **Monitor en vivo del navegador:** http://localhost:8080/vnc.html
-
-Para detenerla, vuelve a la terminal donde corre y pulsa `Ctrl + C`.
+Entra a http://localhost:8501, activa el agente de IA y elige **"Local (Ollama)"**.
 
 > **Nota:** el único ajuste de red es el del paso 2 (Ollama en `0.0.0.0`): se hace
 > una vez y no se repite. El resto de tu sistema (frontend, backend y la base de
 > datos que auditas) se queda tal cual, la herramienta nunca toca tu base de datos
 > directamente.
 
-### Opción B: instalación manual (sin Docker)
+### Opción C: instalación manual (sin Docker)
 
-Sigue los pasos **en orden**, cada comando en una sola línea.
+Para desarrollo, sin contenedor. Usa el modelo local con Ollama (para el modo nube,
+al final elige "Nube" en la interfaz en vez de "Local"). Sigue los pasos en orden.
 
 #### 1. Clona el repositorio y entra a la carpeta
 
@@ -197,37 +240,6 @@ ZAP y Nuclei se instalan aparte de forma manual en esta opción.
 ```bash
 streamlit run app_gui.py
 ```
-
----
-
-## Modelo del agente: local o en la nube
-
-El agente de IA puede usar dos tipos de modelo, y se elige en la barra lateral
-(sección "Agente de IA", opción "Dónde corre el modelo"):
-
-### Local (Ollama)
-
-El modelo corre en tu máquina con Ollama (lo explicado arriba). Es la opción por
-defecto. Requiere Ollama instalado y el ajuste de `OLLAMA_HOST=0.0.0.0` del paso 2.
-
-### Nube (endpoint compatible con OpenAI)
-
-El agente usa un modelo servido en la nube a través de un endpoint compatible con
-la API de OpenAI (por ejemplo vLLM en Modal, Together, Groq). Útil para usar un
-modelo más grande y con más contexto sin depender de tu hardware. En este modo
-**no necesitas Ollama**.
-
-Solo necesitas dos datos del endpoint: su **Base URL** (termina en `/v1`) y su
-**API key**. Puedes escribirlos en la interfaz, o pasarlos al contenedor por
-variables de entorno para no teclearlos cada vez:
-
-```bash
-docker run --rm -it -p 8501:8501 -p 8080:8080 -e LLM_BASE_URL=https://TU-ENDPOINT/v1 -e LLM_API_KEY=TU_CLAVE auditoria_web
-```
-
-Luego en la interfaz elige "Nube", confirma la Base URL y el nombre del modelo (el
-que exponga tu endpoint), y lanza la auditoría. La API key nunca se guarda en el
-código: va solo en la variable de entorno o en el campo de la interfaz.
 
 ---
 
