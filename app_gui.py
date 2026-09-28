@@ -273,9 +273,12 @@ with st.sidebar:
     default_zap = "/usr/local/bin/zap.sh" if os.path.exists("/usr/local/bin/zap.sh") else os.path.expanduser("~/proyectos/ZAP_2.17.0/zap.sh")
     ruta_zap = st.text_input("Ruta a zap.sh (si usas ZAP)", value=default_zap)
 
-    # configuracion del agente de IA (modelo local via ollama)
+    # configuracion del agente de IA (local via ollama o nube via OpenAI-compatible)
     modelo_ollama = "jonathanFS/pentest-owasp"
     host_ollama = "http://localhost:11434"
+    proveedor_llm = "ollama"
+    base_url_llm = ""
+    api_key_llm = ""
     usar_navegador = True
     abrir_ventana = True
     ventana_pensamiento = True
@@ -285,10 +288,28 @@ with st.sidebar:
     timeout_agente = 600
     if modulos_activos.get("agente_ia"):
         st.divider()
-        st.subheader("Agente de IA (modelo local)")
-        modelo_ollama = st.text_input("Modelo en Ollama", value="jonathanFS/pentest-owasp")
-        host_ollama = st.text_input("Host de Ollama",
-                                    value=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
+        st.subheader("Agente de IA")
+        modo = st.radio(
+            "Dónde corre el modelo",
+            ["Local (Ollama)", "Nube (endpoint OpenAI-compatible)"],
+            help="Local usa tu Ollama. Nube usa un endpoint como vLLM en Modal.")
+        if modo.startswith("Nube"):
+            proveedor_llm = "openai"
+            base_url_llm = st.text_input(
+                "Base URL del endpoint (termina en /v1)",
+                value=os.environ.get(
+                    "LLM_BASE_URL",
+                    "https://jonathan007franco--pentest-owasp-vllm-serve.modal.run/v1"))
+            api_key_llm = st.text_input(
+                "API key del endpoint", value=os.environ.get("LLM_API_KEY", ""),
+                type="password")
+            modelo_ollama = st.text_input("Nombre del modelo", value="pentest-owasp",
+                                          help="El 'model' que expone tu endpoint (el nombre del LoRA).")
+        else:
+            proveedor_llm = "ollama"
+            modelo_ollama = st.text_input("Modelo en Ollama", value="jonathanFS/pentest-owasp")
+            host_ollama = st.text_input("Host de Ollama",
+                                        value=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
         usar_navegador = st.checkbox(
             "Modo navegador (ver acciones en vivo)", value=True,
             help="Usa Playwright para interactuar con el sitio y mostrar capturas en vivo.",
@@ -372,6 +393,9 @@ if lanzar:
             "activo": modulos_activos.get("agente_ia", False),
             "modelo": modelo_ollama,
             "host": host_ollama,
+            "proveedor": proveedor_llm,
+            "base_url": base_url_llm.strip(),
+            "api_key": api_key_llm.strip(),
             "navegador": usar_navegador,
             "headless": not abrir_ventana,
             "ventana_pensamiento": ventana_pensamiento,

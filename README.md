@@ -34,7 +34,9 @@ corriendo en tu propia máquina:
 
 Común a cualquier instalación:
 
-- **Ollama:** para correr el modelo de IA local. Descárgalo en https://ollama.com
+- **Ollama:** solo si vas a correr el modelo de IA en **local**. Descárgalo en
+  https://ollama.com. Si vas a usar un **modelo en la nube** (ver la sección
+  "Modelo del agente" más abajo), NO necesitas Ollama.
 
 Si usas **Docker (Opción A, recomendada)**, no necesitas nada más. Nmap, SQLmap,
 Nuclei, ZAP y Playwright ya vienen preinstalados dentro de la imagen.
@@ -198,6 +200,37 @@ streamlit run app_gui.py
 
 ---
 
+## Modelo del agente: local o en la nube
+
+El agente de IA puede usar dos tipos de modelo, y se elige en la barra lateral
+(sección "Agente de IA", opción "Dónde corre el modelo"):
+
+### Local (Ollama)
+
+El modelo corre en tu máquina con Ollama (lo explicado arriba). Es la opción por
+defecto. Requiere Ollama instalado y el ajuste de `OLLAMA_HOST=0.0.0.0` del paso 2.
+
+### Nube (endpoint compatible con OpenAI)
+
+El agente usa un modelo servido en la nube a través de un endpoint compatible con
+la API de OpenAI (por ejemplo vLLM en Modal, Together, Groq). Útil para usar un
+modelo más grande y con más contexto sin depender de tu hardware. En este modo
+**no necesitas Ollama**.
+
+Solo necesitas dos datos del endpoint: su **Base URL** (termina en `/v1`) y su
+**API key**. Puedes escribirlos en la interfaz, o pasarlos al contenedor por
+variables de entorno para no teclearlos cada vez:
+
+```bash
+docker run --rm -it -p 8501:8501 -p 8080:8080 -e LLM_BASE_URL=https://TU-ENDPOINT/v1 -e LLM_API_KEY=TU_CLAVE auditoria_web
+```
+
+Luego en la interfaz elige "Nube", confirma la Base URL y el nombre del modelo (el
+que exponga tu endpoint), y lanza la auditoría. La API key nunca se guarda en el
+código: va solo en la variable de entorno o en el campo de la interfaz.
+
+---
+
 ## Uso
 
 ### 1. Levanta un objetivo de práctica (opcional)
@@ -225,7 +258,7 @@ En el panel izquierdo de la interfaz encontrarás:
 | **URL objetivo** | La dirección del sitio a auditar. Para un sitio público, pon la URL completa (por ejemplo `https://midominio.com`). Si el sitio corre en tu propia máquina y usas Docker, usa `http://host.docker.internal:PUERTO` en lugar de `http://localhost:PUERTO`, porque `localhost` dentro del contenedor apunta a sí mismo. |
 | **Nombre del proyecto** | Un nombre descriptivo para identificar el reporte. |
 | **Módulos** | Activa o desactiva los escáneres que quieras ejecutar (cabeceras, cookies, nmap, ZAP, crawler, agente IA, etc.). |
-| **Agente de IA** | Si lo activas, configura el modelo (`jonathanFS/pentest-owasp`), el host de Ollama y las credenciales opcionales para auditar zonas autenticadas. |
+| **Agente de IA** | Si lo activas, eliges dónde corre el modelo (Local con Ollama, o Nube con un endpoint compatible con OpenAI), el modelo a usar y las credenciales opcionales para auditar zonas autenticadas. Ver la sección "Modelo del agente". |
 | **Monitor en vivo** | Marca "Mostrar navegador visualmente" para ver en tiempo real cómo el agente de IA interactúa con el sitio desde un escritorio virtual integrado. |
 | **Autorización** | Marca la casilla confirmando que tienes permiso para auditar el objetivo. |
 
