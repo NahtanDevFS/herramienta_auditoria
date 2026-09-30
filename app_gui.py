@@ -19,21 +19,10 @@ except Exception:
     _ICONO = None
 
 st.set_page_config(
-    page_title="VigilAI · Auditoría web",
+    page_title="VigilAI - Auditoría web",
     page_icon=_ICONO,
     layout="wide",
 )
-
-# Marca persistente arriba a la izquierda.
-try:
-    st.logo("assets/logo.jpg", size="large")
-except TypeError:
-    try:
-        st.logo("assets/logo.jpg")
-    except Exception:
-        pass
-except Exception:
-    pass
 
 # Identidad visual de VigilAI: tipografía (colores sólidos, sin degradados).
 st.markdown(
@@ -265,23 +254,23 @@ def _panel_en_curso():
         st.rerun()
 
 
-# Cabecera de marca VigilAI: el logo grande, centrado.
-_l, _m, _r = st.columns([1, 2, 1])
-with _m:
-    try:
-        st.image("assets/logo.jpg", use_container_width=True)
-    except Exception:
-        st.markdown("<h1 style='text-align:center;color:#0e2a47;'>VigilAI</h1>",
-                    unsafe_allow_html=True)
+# Cabecera de marca VigilAI: banner de texto con fondo navy solido (sin degradado).
 st.markdown(
-    "<p style='text-align:center;color:#12506b;font-size:15px;margin-top:-4px;'>"
-    "Auditoría web automatizada · OWASP Top 10</p>",
+    "<div style='background:#0e2a47;border-radius:14px;padding:18px 26px;"
+    "margin-bottom:8px;'>"
+    "<h1 style='color:#ffffff;margin:0;font-size:30px;'>VigilAI</h1>"
+    "<p style='color:#bfe9e4;margin:4px 0 0 0;font-size:14px;'>"
+    "Auditoría web inteligente - OWASP Top 10 - Cybersecurity &amp; AI</p>"
+    "</div>",
     unsafe_allow_html=True,
 )
-st.divider()
 
 # barra lateral: configuracion
 with st.sidebar:
+    try:
+        st.image("assets/logo.jpg", width=160)
+    except Exception:
+        pass
     st.header("Configuracion")
 
     url = st.text_input("URL objetivo", placeholder="http://localhost:3000",
