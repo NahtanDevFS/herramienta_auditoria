@@ -159,18 +159,21 @@ class _ClienteOpenAI:
         if tools:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
-        # Tope de tokens por respuesta: el agente solo necesita una tool-call corta;
-        # sin esto vLLM permite generar hasta llenar el contexto (~29k tokens) y se
-        # queda "colgado" varios minutos si el modelo no para. 1024 es de sobra.
-        kwargs["max_tokens"] = (options or {}).get("max_tokens", 1024)
         opts = options or {}
-        if "temperature" in opts:
-            kwargs["temperature"] = opts["temperature"]
-        if "top_p" in opts:
-            kwargs["top_p"] = opts["top_p"]
-        # Qwen3: desactivar el modo "thinking" para el agente (no ensucia el contexto
-        # ni interfiere con el tool-calling). vLLM lo acepta via chat_template_kwargs.
-        kwargs["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
+        # Muestreo pensado para tool-calling con el modelo cuantizado (AWQ):
+        #  - max_tokens: sin tope, vLLM genera hasta llenar el contexto (~29k) y se
+        #    cuelga varios minutos. 1024 es de sobra para una tool-call.
+        #  - temperatura baja: menos aleatoriedad, menos "divague".
+        #  - repetition_penalty: EVITA que el modelo AWQ colapse en bucles de
+        #    repeticion ("a a a a..."), que era lo que lo volvia "loco".
+        kwargs["max_tokens"] = opts.get("max_tokens", 1024)
+        kwargs["temperature"] = opts.get("temperature", 0.3)
+        kwargs["top_p"] = opts.get("top_p", 0.9)
+        kwargs["extra_body"] = {
+            "chat_template_kwargs": {"enable_thinking": False},
+            "repetition_penalty": 1.15,
+            "top_k": 20,
+        }
 
         try:
             resp = self._cli.chat.completions.create(**kwargs)
@@ -206,6 +209,15 @@ class _ClienteOpenAI:
                     rescatadas.append(_LlamadaHerramienta(
                         obj["name"], args if isinstance(args, dict) else {}))
             tool_calls = rescatadas or None
+
+        # Fallback 2: a veces el modelo emite el tool-call como JSON CRUDO, sin las
+        # etiquetas <tool_call> (esto disparaba el "ERROR DE FORMATO"). Lo rescatamos.
+        if not tool_calls and content and "{" in content:
+            obj = _json_balanceado(content)
+            if isinstance(obj, dict) and obj.get("name") and "arguments" in obj:
+                args = obj.get("arguments")
+                tool_calls = [_LlamadaHerramienta(
+                    obj["name"], args if isinstance(args, dict) else {})]
 
         # Limpiar el texto de etiquetas <think>/<tool_call> para el historial.
         content = _THINK_RE.sub("", content)
