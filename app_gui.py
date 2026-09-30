@@ -31,6 +31,17 @@ st.markdown(
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500&display=swap');
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     h1, h2, h3, h4 { font-family: 'Poppins', sans-serif; letter-spacing: .3px; }
+    /* Centrar el logo en la barra lateral */
+    section[data-testid="stSidebar"] [data-testid="stImage"] {
+        display: flex; justify-content: center; width: 100%;
+    }
+    /* Quitar el boton de "pantalla completa" de las imagenes */
+    [data-testid="StyledFullScreenButton"],
+    button[title="View fullscreen"],
+    button[aria-label="View fullscreen"],
+    section[data-testid="stSidebar"] [data-testid="stElementToolbar"] {
+        display: none !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -270,9 +281,9 @@ st.markdown(
 # el interruptor; por defecto la interfaz es clara.
 _CSS_OSCURO = """
 <style>
-.stApp { background-color: #0e1b2a; }
+.stApp { background-color: #081120; }
 [data-testid="stHeader"] { background: transparent; }
-section[data-testid="stSidebar"] { background-color: #13263b; }
+section[data-testid="stSidebar"] { background-color: #0b1728; }
 .stApp, .stApp p, .stApp span, .stApp label, .stApp li, .stApp small,
 .stApp [data-testid="stMarkdownContainer"] { color: #dfe8f0; }
 .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5 { color: #ffffff; }
@@ -280,13 +291,23 @@ section[data-testid="stSidebar"] { background-color: #13263b; }
 .stApp [data-baseweb="input"] > div,
 .stApp [data-baseweb="select"] > div,
 .stApp [data-baseweb="base-input"] {
-    background-color: #1b2a3d !important; color: #e6edf3 !important;
-    border-color: #2a3f57 !important;
+    background-color: #102033 !important;
+    color: #e6edf3 !important; border-color: #263a52 !important;
 }
-.stApp pre, .stApp code { background-color: #0b1622 !important; color: #bfe9e4 !important; }
-.stApp [data-testid="stExpander"] { background-color: #13263b; border: 1px solid #2a3f57; }
-.stApp [data-testid="stMetric"] { background-color: #13263b; border-radius: 8px; padding: 6px 10px; }
-.stApp hr { border-color: #2a3f57; }
+/* Botones: texto legible en oscuro. Los secundarios llevan fondo oscuro; el
+   primario (teal) se deja como esta. */
+.stApp button { color: #e6edf3 !important; }
+.stApp button[kind="secondary"],
+.stApp [data-testid="stBaseButton-secondary"] {
+    background-color: #102033 !important; border-color: #263a52 !important;
+}
+.stApp pre, .stApp code { background-color: #060d17 !important; color: #bfe9e4 !important; }
+.stApp [data-testid="stExpander"] { background-color: #0b1728; border: 1px solid #263a52; }
+.stApp [data-testid="stMetric"] { background-color: #0b1728; border-radius: 8px; padding: 6px 10px; }
+.stApp [data-testid="stNotification"], .stApp [data-testid="stAlert"] {
+    background-color: #102033 !important; color: #dfe8f0 !important;
+}
+.stApp hr { border-color: #263a52; }
 </style>
 """
 
