@@ -266,11 +266,40 @@ st.markdown(
 )
 
 # barra lateral: configuracion
+# CSS del tema oscuro (colores de la marca). Se inyecta solo si el usuario activa
+# el interruptor; por defecto la interfaz es clara.
+_CSS_OSCURO = """
+<style>
+.stApp { background-color: #0e1b2a; }
+[data-testid="stHeader"] { background: transparent; }
+section[data-testid="stSidebar"] { background-color: #13263b; }
+.stApp, .stApp p, .stApp span, .stApp label, .stApp li, .stApp small,
+.stApp [data-testid="stMarkdownContainer"] { color: #dfe8f0; }
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5 { color: #ffffff; }
+.stApp input, .stApp textarea,
+.stApp [data-baseweb="input"] > div,
+.stApp [data-baseweb="select"] > div,
+.stApp [data-baseweb="base-input"] {
+    background-color: #1b2a3d !important; color: #e6edf3 !important;
+    border-color: #2a3f57 !important;
+}
+.stApp pre, .stApp code { background-color: #0b1622 !important; color: #bfe9e4 !important; }
+.stApp [data-testid="stExpander"] { background-color: #13263b; border: 1px solid #2a3f57; }
+.stApp [data-testid="stMetric"] { background-color: #13263b; border-radius: 8px; padding: 6px 10px; }
+.stApp hr { border-color: #2a3f57; }
+</style>
+"""
+
 with st.sidebar:
     try:
         st.image("assets/logo.jpg", width=160)
     except Exception:
         pass
+    modo_oscuro = st.toggle(
+        "Tema oscuro", value=False,
+        help="Cambia la interfaz a un tema oscuro. Por defecto es claro.")
+    if modo_oscuro:
+        st.markdown(_CSS_OSCURO, unsafe_allow_html=True)
     st.header("Configuracion")
 
     url = st.text_input("URL objetivo", placeholder="http://localhost:3000",
