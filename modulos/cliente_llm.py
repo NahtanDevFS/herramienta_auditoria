@@ -10,6 +10,39 @@
 #          .message.tool_calls[i].function.name / .function.arguments (dict)
 
 import json
+import re
+
+# El modelo (Qwen3 fine-tuneado) a veces emite las llamadas en formato Hermes dentro
+# del texto (<tool_call>{...}</tool_call>) y vLLM no las extrae al campo tool_calls
+# (sobre todo si el JSON trae una llave de mas). Estas utilidades las rescatan.
+_TOOLCALL_RE = re.compile(r"<tool_call>\s*(.*?)\s*</tool_call>", re.DOTALL)
+_THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
+
+
+def _json_balanceado(s):
+    # Parsea el primer objeto JSON balanceado, ignorando basura despues (p.ej. una
+    # llave de mas). Tolerante al JSON algo mal formado que emite el modelo.
+    s = (s or "").strip()
+    try:
+        return json.loads(s)
+    except Exception:
+        pass
+    ini = s.find("{")
+    if ini < 0:
+        return None
+    prof = 0
+    for i in range(ini, len(s)):
+        c = s[i]
+        if c == "{":
+            prof += 1
+        elif c == "}":
+            prof -= 1
+            if prof == 0:
+                try:
+                    return json.loads(s[ini:i + 1])
+                except Exception:
+                    return None
+    return None
 
 
 def crear_cliente(cfg: dict, logger=None):
@@ -135,8 +168,16 @@ class _ClienteOpenAI:
         # ni interfiere con el tool-calling). vLLM lo acepta via chat_template_kwargs.
         kwargs["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
 
-        resp = self._cli.chat.completions.create(**kwargs)
+        try:
+            resp = self._cli.chat.completions.create(**kwargs)
+        except Exception as e:
+            if self._logger:
+                self._logger.error(
+                    f"[cliente_llm] Fallo la llamada al endpoint "
+                    f"(con_tools={bool(tools)}): {e}")
+            raise
         m = resp.choices[0].message
+        content = m.content or ""
 
         tool_calls = None
         if getattr(m, "tool_calls", None):
@@ -148,4 +189,29 @@ class _ClienteOpenAI:
                 except (ValueError, TypeError):
                     args = {}
                 tool_calls.append(_LlamadaHerramienta(tc.function.name, args))
-        return _Respuesta(_Mensaje(content=m.content or "", tool_calls=tool_calls))
+
+        # Fallback: si vLLM no extrajo los tool_calls pero el modelo los escribio en el
+        # texto (formato Hermes <tool_call>{...}</tool_call>), los rescatamos aqui,
+        # tolerando el JSON algo mal formado (llaves de mas) que emite el modelo.
+        if not tool_calls and "<tool_call>" in content:
+            rescatadas = []
+            for bloque in _TOOLCALL_RE.findall(content):
+                obj = _json_balanceado(bloque)
+                if isinstance(obj, dict) and obj.get("name"):
+                    args = obj.get("arguments")
+                    rescatadas.append(_LlamadaHerramienta(
+                        obj["name"], args if isinstance(args, dict) else {}))
+            tool_calls = rescatadas or None
+
+        # Limpiar el texto de etiquetas <think>/<tool_call> para el historial.
+        content = _THINK_RE.sub("", content)
+        content = _TOOLCALL_RE.sub("", content)
+        content = (content.replace("<tool_call>", "").replace("</tool_call>", "")
+                          .replace("<think>", "").replace("</think>", "").strip())
+
+        if self._logger and tools:
+            self._logger.info(
+                f"[cliente_llm] Respuesta con tools -> "
+                f"{len(tool_calls) if tool_calls else 0} tool_call(s); "
+                f"content={content[:120]!r}")
+        return _Respuesta(_Mensaje(content=content, tool_calls=tool_calls))
