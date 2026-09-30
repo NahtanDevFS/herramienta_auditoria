@@ -158,7 +158,12 @@ class _ClienteOpenAI:
         kwargs = {"model": model, "messages": _a_formato_openai(messages or [])}
         if tools:
             kwargs["tools"] = tools
-            kwargs["tool_choice"] = "auto"
+            # "required" FUERZA una tool-call valida en cada turno (decodificacion
+            # guiada de vLLM). Evita que el modelo (entrenado en prosa/reportes) se
+            # ponga a escribir texto y colapse en repeticion, y de paso garantiza
+            # JSON valido. El bucle del agente se detiene por limite de acciones o
+            # por cobertura, no por "el modelo dejo de pedir herramientas".
+            kwargs["tool_choice"] = "required"
         opts = options or {}
         # Muestreo pensado para tool-calling con el modelo cuantizado (AWQ):
         #  - max_tokens: sin tope, vLLM genera hasta llenar el contexto (~29k) y se
