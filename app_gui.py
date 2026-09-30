@@ -294,6 +294,16 @@ section[data-testid="stSidebar"] { background-color: #0b1728; }
     background-color: #102033 !important;
     color: #e6edf3 !important; border-color: #263a52 !important;
 }
+/* Placeholders legibles (antes quedaban casi negros sobre el fondo oscuro) */
+.stApp input::placeholder, .stApp textarea::placeholder {
+    color: #8aa0b6 !important; opacity: 1 !important;
+}
+/* Iconos de ayuda "?" mas visibles en oscuro */
+.stApp [data-testid="stTooltipIcon"],
+.stApp [data-testid="stTooltipIcon"] svg,
+.stApp [data-testid="stTooltipHoverTarget"] svg {
+    fill: #8aa0b6 !important; color: #8aa0b6 !important;
+}
 /* Botones: texto legible en oscuro. Los secundarios llevan fondo oscuro; el
    primario (teal) se deja como esta. */
 .stApp button { color: #e6edf3 !important; }
