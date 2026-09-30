@@ -301,6 +301,8 @@ section[data-testid="stSidebar"] { background-color: #0b1728; }
 /* Botones internos de los inputs (los +/- del number_input y el ojo de la
    contrasena): que su interior tambien sea oscuro. */
 .stApp [data-testid="stNumberInput"] button,
+.stApp [data-testid="stTextInput"] button,
+.stApp [data-testid="stTextInputRootElement"] button,
 .stApp [data-baseweb="input"] button {
     background-color: #102033 !important; border-color: #263a52 !important;
     color: #8aa0b6 !important;
@@ -317,6 +319,12 @@ section[data-testid="stSidebar"] { background-color: #0b1728; }
 .stApp button[kind="secondary"],
 .stApp [data-testid="stBaseButton-secondary"] {
     background-color: #102033 !important; border-color: #263a52 !important;
+}
+/* Botones deshabilitados (p.ej. "Iniciar auditoria" sin marcar la autorizacion):
+   que su borde y texto se distingan en oscuro, no casi invisibles. */
+.stApp button:disabled {
+    border: 1px solid #3a5570 !important; color: #9fb3c8 !important;
+    opacity: 1 !important;
 }
 .stApp pre, .stApp code { background-color: #060d17 !important; color: #bfe9e4 !important; }
 .stApp [data-testid="stExpander"] { background-color: #0b1728; border: 1px solid #263a52; }
