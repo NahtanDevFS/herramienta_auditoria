@@ -65,6 +65,7 @@ PLANTILLA = env.from_string(r"""<!DOCTYPE html>
     color: white;
   }
   .valoracion .puntuacion { font-size: 48px; font-weight: bold; }
+  .valoracion .escala25 { font-size: 13px; opacity: 0.85; margin-top: 2px; }
   .valoracion .nivel { font-size: 20px; text-transform: uppercase; }
 
   table { width: 100%; border-collapse: collapse; margin: 12px 0; }
@@ -124,6 +125,7 @@ PLANTILLA = env.from_string(r"""<!DOCTYPE html>
 {% if valoracion %}
 <div class="valoracion" style="background: {{ color_nivel_global }};">
   <div class="puntuacion">{{ valoracion.puntuacion }}/10</div>
+  <div class="escala25">equivale a {{ valoracion.puntuacion_25 }}/25 en la escala de la matriz</div>
   <div class="nivel">Riesgo {{ valoracion.nivel }}</div>
 </div>
 <p>{{ valoracion.descripcion }}</p>
@@ -213,6 +215,27 @@ celda indica cuantos hallazgos caen en ese nivel de riesgo.</p>
 <h1>4. Cierre del Agente de IA</h1>
 <p>Resumen de lo que el agente de IA probo de forma activa sobre el objetivo,
 su valoracion y las lineas que quedarian pendientes.</p>
+
+{% if resumen_agente.plan %}
+<h3>Plan de la auditoria</h3>
+{% for parrafo in resumen_agente.plan.split('\n') %}{% if parrafo.strip() %}<p>{{ parrafo.strip() }}</p>
+{% endif %}{% endfor %}
+{% endif %}
+
+{% if resumen_agente.checklist %}
+<h3>Checklist de objetivos</h3>
+<table>
+  <tr><th style="width:36px;">#</th><th>Objetivo</th><th>URL</th><th style="width:120px;">Estado</th></tr>
+  {% for c in resumen_agente.checklist %}
+  <tr>
+    <td>{{ loop.index }}</td>
+    <td>{{ c.descripcion }}</td>
+    <td>{{ c.url }}</td>
+    <td>{% if c.estado == 'hallazgo' %}Con hallazgo{% elif c.estado == 'probado' %}Probado{% else %}Pendiente{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
 
 {% if resumen_agente.narrativa %}
 <h3>Valoracion del agente</h3>

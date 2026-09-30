@@ -60,6 +60,7 @@ MODULOS_INFO = {
     "cabeceras_http": ("Cabeceras HTTP (A02)", "Revisa cabeceras de seguridad."),
     "cookies": ("Cookies (A04)", "Flags Secure, HttpOnly, SameSite."),
     "tls_ssl": ("TLS/SSL (A04)", "Certificado y protocolos."),
+    "transporte_https": ("Downgrade HTTPS (A02)", "Redireccion, HSTS, contenido mixto."),
     "archivos_expuestos": ("Archivos expuestos (A02)", ".git, .env, backups."),
     "tecnologias": ("Tecnologias (A03)", "Stack y versiones."),
     "nuclei": ("Nuclei (varios)", "Escaneo por plantillas/CVE."),
@@ -571,6 +572,8 @@ if "datos_reporte" in st.session_state and not st.session_state.get("auditoria_e
             f"border-radius:8px;text-align:center;'>"
             f"<span style='font-size:36px;font-weight:bold;'>"
             f"{valoracion.get('puntuacion')}/10</span><br>"
+            f"<span style='font-size:15px;opacity:0.85;'>"
+            f"equivale a {valoracion.get('puntuacion_25')}/25 en la escala de la matriz</span><br>"
             f"<span style='font-size:18px;'>Riesgo {valoracion.get('nivel','')}</span>"
             f"</div>", unsafe_allow_html=True)
         st.write(valoracion.get("descripcion", ""))

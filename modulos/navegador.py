@@ -390,6 +390,31 @@ class NavegadorAgente:
             self._captura("login: error")
             return {"error": f"Error durante el login: {e}"}
 
+    def confirmar_acceso_autenticado(self):
+        # CONFIRMACION ENCADENADA (solo lectura): tras un bypass de login, verifica
+        # que la sesion resultante es realmente valida, sin ejecutar ninguna accion
+        # destructiva. Solo inspecciona el estado (token, indicador de logout, DOM).
+        # Devuelve un dict con la evidencia de la confirmacion.
+        try:
+            estado = self._estado_sesion(self._page.url)
+        except Exception as e:
+            return {"confirmado": False, "error": str(e)}
+        senales = []
+        if estado.get("token_like"):
+            senales.append("token de sesion presente en el storage")
+        if estado.get("hay_logout"):
+            senales.append("opcion de cerrar sesion visible")
+        if estado.get("url_cambio") and "login" not in (estado.get("url_actual") or "").lower():
+            senales.append("redireccion fuera de la pagina de login")
+        if not estado.get("hay_password"):
+            senales.append("ya no se muestra el formulario de login")
+        confirmado = bool(estado.get("autenticado")) and bool(senales)
+        return {
+            "confirmado": confirmado,
+            "url_actual": estado.get("url_actual"),
+            "senales": senales,
+        }
+
     def probar_busqueda(self, payload):
         # inyecta payload en buscador, verifica reflejo/error e intercepta dialogs (xss confirmado)
         self._descartar_overlays()

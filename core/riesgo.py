@@ -143,6 +143,7 @@ class MotorRiesgo:
         if not riesgos:
             return {
                 "puntuacion": 0.0,
+                "puntuacion_25": 0.0,
                 "nivel": "Bajo",
                 "descripcion": "No se identificaron riesgos significativos.",
             }
@@ -151,6 +152,9 @@ class MotorRiesgo:
         cvss_max = max(cvss_valores)
         cvss_medio = sum(cvss_valores) / len(cvss_valores)
         puntuacion = round(0.6 * cvss_max + 0.4 * cvss_medio, 1)
+        # Misma valoracion re-escalada a 0-25, para que sea consistente con la
+        # escala de la matriz de riesgo (impacto x probabilidad, max 25).
+        puntuacion_25 = round(puntuacion / 10 * 25, 1)
 
         if puntuacion >= 9.0:
             nivel = "Critico"
@@ -172,6 +176,7 @@ class MotorRiesgo:
 
         return {
             "puntuacion": puntuacion,
+            "puntuacion_25": puntuacion_25,
             "nivel": nivel,
             "cvss_maximo": round(cvss_max, 1),
             "cvss_medio": round(cvss_medio, 1),

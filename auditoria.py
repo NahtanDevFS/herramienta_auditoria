@@ -12,6 +12,7 @@ ORDEN_MODULOS = [
     ("cabeceras_http", "cabeceras_http"),
     ("cookies", "cookies"),
     ("tls_ssl", "tls_ssl"),
+    ("transporte_https", "transporte_https"),
     ("archivos_expuestos", "archivos_expuestos"),
     ("tecnologias", "tecnologias"),
     ("nuclei", "nuclei"),
