@@ -12,9 +12,35 @@ from core.reporte_html import generar as generar_informe
 load_dotenv()
 
 st.set_page_config(
-    page_title="Auditoria de Seguridad Web",
-    page_icon="[S]",
+    page_title="VigilAI · Auditoría web",
+    page_icon="🛡️",
     layout="wide",
+)
+
+# Marca persistente arriba a la izquierda (si el logo existe).
+try:
+    st.logo("assets/logo.jpg")
+except Exception:
+    pass
+
+# Identidad visual de VigilAI: tipografía y acentos.
+st.markdown(
+    """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500&display=swap');
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    h1, h2, h3, h4 { font-family: 'Poppins', sans-serif; letter-spacing: .3px; }
+    /* Barra de acento superior con los colores de la marca */
+    .vigil-hero {
+        background: linear-gradient(135deg, #0e2a47 0%, #12506b 55%, #17c3b2 100%);
+        border-radius: 14px; padding: 18px 26px; margin-bottom: 6px;
+        display: flex; align-items: center; gap: 18px;
+    }
+    .vigil-hero h1 { color: #ffffff; margin: 0; font-size: 30px; }
+    .vigil-hero p  { color: #bfe9e4; margin: 2px 0 0 0; font-size: 14px; }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 COLOR_SEV = {
@@ -235,8 +261,14 @@ def _panel_en_curso():
         st.rerun()
 
 
-st.title("Herramienta de Auditoria de Seguridad Web")
-st.caption("Analisis segun OWASP Top 10")
+# Cabecera de marca VigilAI (banner con degradado de la identidad).
+st.markdown(
+    "<div class='vigil-hero'>"
+    "<div><h1>VigilAI</h1>"
+    "<p>Auditoría web inteligente · OWASP Top 10 · Cybersecurity &amp; AI</p></div>"
+    "</div>",
+    unsafe_allow_html=True,
+)
 
 # barra lateral: configuracion
 with st.sidebar:

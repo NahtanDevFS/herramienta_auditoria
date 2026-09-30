@@ -1,0 +1,9 @@
+# Tema visual de VigilAI (identidad de marca: navy + teal).
+# Para un look oscuro tipo "consola de seguridad", cambia backgroundColor a
+# "#0e1b2a", secondaryBackgroundColor a "#13263b" y textColor a "#e6edf3".
+[theme]
+primaryColor = "#17c3b2"              # teal: botones, acentos, sliders
+backgroundColor = "#ffffff"          # fondo principal
+secondaryBackgroundColor = "#eef4f7" # barra lateral y tarjetas (azul grisáceo claro)
+textColor = "#0e2a47"                # navy para el texto
+font = "sans serif"
