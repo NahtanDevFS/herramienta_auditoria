@@ -11,33 +11,37 @@ from core.reporte_html import generar as generar_informe
 
 load_dotenv()
 
+# Icono de la pestaña del navegador: el escudo del logo (sin emojis).
+try:
+    from PIL import Image as _PILImage
+    _ICONO = _PILImage.open("assets/favicon.png")
+except Exception:
+    _ICONO = None
+
 st.set_page_config(
     page_title="VigilAI · Auditoría web",
-    page_icon="🛡️",
+    page_icon=_ICONO,
     layout="wide",
 )
 
-# Marca persistente arriba a la izquierda (si el logo existe).
+# Marca persistente arriba a la izquierda.
 try:
-    st.logo("assets/logo.jpg")
+    st.logo("assets/logo.jpg", size="large")
+except TypeError:
+    try:
+        st.logo("assets/logo.jpg")
+    except Exception:
+        pass
 except Exception:
     pass
 
-# Identidad visual de VigilAI: tipografía y acentos.
+# Identidad visual de VigilAI: tipografía (colores sólidos, sin degradados).
 st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500&display=swap');
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     h1, h2, h3, h4 { font-family: 'Poppins', sans-serif; letter-spacing: .3px; }
-    /* Barra de acento superior con los colores de la marca */
-    .vigil-hero {
-        background: linear-gradient(135deg, #0e2a47 0%, #12506b 55%, #17c3b2 100%);
-        border-radius: 14px; padding: 18px 26px; margin-bottom: 6px;
-        display: flex; align-items: center; gap: 18px;
-    }
-    .vigil-hero h1 { color: #ffffff; margin: 0; font-size: 30px; }
-    .vigil-hero p  { color: #bfe9e4; margin: 2px 0 0 0; font-size: 14px; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -261,14 +265,20 @@ def _panel_en_curso():
         st.rerun()
 
 
-# Cabecera de marca VigilAI (banner con degradado de la identidad).
+# Cabecera de marca VigilAI: el logo grande, centrado.
+_l, _m, _r = st.columns([1, 2, 1])
+with _m:
+    try:
+        st.image("assets/logo.jpg", use_container_width=True)
+    except Exception:
+        st.markdown("<h1 style='text-align:center;color:#0e2a47;'>VigilAI</h1>",
+                    unsafe_allow_html=True)
 st.markdown(
-    "<div class='vigil-hero'>"
-    "<div><h1>VigilAI</h1>"
-    "<p>Auditoría web inteligente · OWASP Top 10 · Cybersecurity &amp; AI</p></div>"
-    "</div>",
+    "<p style='text-align:center;color:#12506b;font-size:15px;margin-top:-4px;'>"
+    "Auditoría web automatizada · OWASP Top 10</p>",
     unsafe_allow_html=True,
 )
+st.divider()
 
 # barra lateral: configuracion
 with st.sidebar:
@@ -390,7 +400,7 @@ with st.sidebar:
             "color:#fff !important;}"
             "</style>",
             unsafe_allow_html=True)
-        if st.button("⏹ Detener auditoria", key="btn_detener",
+        if st.button("Detener auditoria", key="btn_detener",
                      use_container_width=True):
             _detener_auditoria()
             st.rerun()
