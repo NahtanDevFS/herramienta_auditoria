@@ -159,6 +159,10 @@ class _ClienteOpenAI:
         if tools:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
+        # Tope de tokens por respuesta: el agente solo necesita una tool-call corta;
+        # sin esto vLLM permite generar hasta llenar el contexto (~29k tokens) y se
+        # queda "colgado" varios minutos si el modelo no para. 1024 es de sobra.
+        kwargs["max_tokens"] = (options or {}).get("max_tokens", 1024)
         opts = options or {}
         if "temperature" in opts:
             kwargs["temperature"] = opts["temperature"]
