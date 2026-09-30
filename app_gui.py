@@ -298,6 +298,13 @@ section[data-testid="stSidebar"] { background-color: #0b1728; }
 .stApp input::placeholder, .stApp textarea::placeholder {
     color: #8aa0b6 !important; opacity: 1 !important;
 }
+/* Botones internos de los inputs (los +/- del number_input y el ojo de la
+   contrasena): que su interior tambien sea oscuro. */
+.stApp [data-testid="stNumberInput"] button,
+.stApp [data-baseweb="input"] button {
+    background-color: #102033 !important; border-color: #263a52 !important;
+    color: #8aa0b6 !important;
+}
 /* Iconos de ayuda "?" mas visibles en oscuro */
 .stApp [data-testid="stTooltipIcon"],
 .stApp [data-testid="stTooltipIcon"] svg,
