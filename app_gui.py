@@ -223,17 +223,32 @@ def _panel_en_curso():
     pct = int(indice / max(total, 1) * 100)
     st.progress(pct, text=f"Ejecutando: {modulo} ({indice}/{max(total, 1)})")
 
-    # terminal de progreso en vivo (scrolleable, mas reciente arriba)
-    st.markdown("**Terminal de progreso** (mas reciente arriba)")
+    # terminal de progreso en vivo (scrolleable, con auto-scroll al fondo)
+    st.markdown("**Terminal de progreso**")
     try:
         with open(ruta_log, encoding="utf-8") as f:
             lineas = f.readlines()[-400:]      # historial disponible para scrollear
-        texto = "".join(reversed(lineas)).strip() or "Iniciando..."
+        texto = "".join(lineas).strip() or "Iniciando..."
     except Exception:
         texto = "Iniciando..."
-    # contenedor de altura fija: aparece la barra de scroll y se puede recorrer
-    with st.container(height=260):
-        st.code(texto, language="text")
+    # se renderiza como HTML con un script que baja el scroll al fondo en cada
+    # refresco (cada segundo), para que lo mas reciente quede siempre a la vista.
+    import html as _html
+    import streamlit.components.v1 as _components
+    _contenido = _html.escape(texto)
+    _components.html(
+        f"""
+        <div id="logbox" style="height:250px; overflow-y:auto; background:#0e1117;
+             color:#e6edf3; font-family:Consolas,Menlo,monospace; font-size:12px;
+             line-height:1.45; padding:10px; border-radius:6px; white-space:pre-wrap;
+             word-break:break-word; border:1px solid #30363d;">{_contenido}</div>
+        <script>
+          var b = document.getElementById('logbox');
+          if (b) {{ b.scrollTop = b.scrollHeight; }}
+        </script>
+        """,
+        height=270,
+    )
 
     # resultado disponible en la cola?
     resultado = None
