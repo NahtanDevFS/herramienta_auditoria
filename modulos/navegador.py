@@ -415,6 +415,36 @@ class NavegadorAgente:
             "senales": senales,
         }
 
+    def analizar_almacenamiento_sesion(self):
+        # SOLO LECTURA: busca tokens de sesion en localStorage/sessionStorage y
+        # devuelve donde estan (storage + clave), para evaluar su exposicion a JS.
+        try:
+            return self._page.evaluate(r"""
+                () => {
+                  const out = [];
+                  const jwt = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+                  const scan = (s, name) => {
+                    try {
+                      for (let i = 0; i < s.length; i++) {
+                        const k = s.key(i);
+                        const v = (s.getItem(k) || '') + '';
+                        const kn = k.toLowerCase();
+                        const parece = kn.includes('token') || kn.includes('jwt') ||
+                                       kn.includes('auth') || kn.includes('session') ||
+                                       kn.includes('bearer');
+                        if ((parece && v.length > 20) || jwt.test(v))
+                          out.push({storage: name, key: k, es_jwt: jwt.test(v), valor: v});
+                      }
+                    } catch (e) {}
+                  };
+                  scan(localStorage, 'localStorage');
+                  scan(sessionStorage, 'sessionStorage');
+                  return out;
+                }
+            """)
+        except Exception:
+            return []
+
     def probar_busqueda(self, payload):
         # inyecta payload en buscador, verifica reflejo/error e intercepta dialogs (xss confirmado)
         self._descartar_overlays()
