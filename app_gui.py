@@ -223,14 +223,17 @@ def _panel_en_curso():
     pct = int(indice / max(total, 1) * 100)
     st.progress(pct, text=f"Ejecutando: {modulo} ({indice}/{max(total, 1)})")
 
-    # terminal de progreso en vivo (ultimas lineas del log)
-    st.markdown("**Terminal de progreso**")
+    # terminal de progreso en vivo (scrolleable, mas reciente arriba)
+    st.markdown("**Terminal de progreso** (mas reciente arriba)")
     try:
         with open(ruta_log, encoding="utf-8") as f:
-            lineas = f.readlines()[-14:]
-        st.code("".join(lineas).strip() or "Iniciando...", language="text")
+            lineas = f.readlines()[-400:]      # historial disponible para scrollear
+        texto = "".join(reversed(lineas)).strip() or "Iniciando..."
     except Exception:
-        st.code("Iniciando...", language="text")
+        texto = "Iniciando..."
+    # contenedor de altura fija: aparece la barra de scroll y se puede recorrer
+    with st.container(height=260):
+        st.code(texto, language="text")
 
     # resultado disponible en la cola?
     resultado = None
