@@ -77,7 +77,7 @@ PLANTILLA = env.from_string(r"""<!DOCTYPE html>
            line-height: 22px; padding-left: 6px; white-space: nowrap; }
 
   /* Matriz de riesgo */
-  .matriz { border-collapse: collapse; margin: 15px auto; }
+  .matriz { border-collapse: collapse; margin: 15px auto; page-break-inside: avoid; }
   .matriz td, .matriz th { width: 70px; height: 55px; text-align: center;
     vertical-align: middle; border: 1px solid #fff; font-weight: bold; }
   .matriz .eje { background: #E8EAF6; color: #1A237E; font-size: 11px;
@@ -99,7 +99,13 @@ PLANTILLA = env.from_string(r"""<!DOCTYPE html>
     word-break: break-all; margin-top: 4px;
   }
 
-  .categoria-seccion { page-break-inside: avoid; }
+  /* control de saltos de pagina en el PDF */
+  h1, h2, h3, h4 { page-break-after: avoid; }   /* el titulo no se queda solo al pie */
+  tr { page-break-inside: avoid; }              /* una fila no se parte entre paginas */
+  .valoracion, .barra-cont { page-break-inside: avoid; }
+  .bloque-matriz { page-break-inside: avoid; }  /* titulo + tabla de la matriz juntos */
+  /* .categoria-seccion ya NO fuerza 'avoid' entero: secciones largas pueden fluir
+     entre paginas; lo que se mantiene unido es cada .hallazgo y cada fila. */
   .footer-nota { margin-top: 40px; padding-top: 12px; border-top: 1px solid #CFD8DC;
     font-size: 10px; color: #90A4AE; }
 </style>
@@ -151,6 +157,7 @@ PLANTILLA = env.from_string(r"""<!DOCTYPE html>
 
 <!-- ===================== MATRIZ DE RIESGO ===================== -->
 {% if matriz %}
+<div class="bloque-matriz">
 <h1>2. Matriz de Riesgo</h1>
 <p>Cada hallazgo se ubica segun su <strong>impacto</strong> (eje vertical) y su
 <strong>probabilidad de explotacion</strong> (eje horizontal). El numero en cada
@@ -176,6 +183,7 @@ celda indica cuantos hallazgos caen en ese nivel de riesgo.</p>
 <p style="text-align:center; font-size:11px; color:#546E7A;">
   Eje vertical (I): Impacto 1-5 &nbsp;|&nbsp; Eje horizontal (P): Probabilidad 1-5
 </p>
+</div>
 {% endif %}
 
 <!-- ===================== HALLAZGOS ===================== -->

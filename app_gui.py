@@ -112,6 +112,11 @@ def _worker_auditoria(config, ruta_log, ruta_estado, cola):
         carpeta = config.get("salida", {}).get("carpeta", "resultados")
         reporte.guardar_json(carpeta)
         rutas = generar_informe(datos, carpeta, ["html", "pdf"], logger)
+        try:
+            from core.reporte_excel import generar_excel
+            rutas.append(generar_excel(datos, carpeta, logger))
+        except Exception as e:
+            logger.error(f"No se pudo generar el Excel: {e}")
         videos = sorted(glob.glob(os.path.join(carpeta, "video", "*.webm")),
                         key=os.path.getmtime, reverse=True)
         cola.put({"ok": True, "datos": datos, "rutas": rutas,

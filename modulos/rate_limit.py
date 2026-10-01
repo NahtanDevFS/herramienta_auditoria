@@ -19,7 +19,7 @@ from core.modelo_hallazgo import Hallazgo
 
 ORIGEN = "modulo_rate_limit"
 
-N_PETICIONES_DEFECTO = 100   # rafaga acotada (configurable via rate_limit.peticiones)
+N_PETICIONES_DEFECTO = 200   # rafaga acotada (configurable via rate_limit.peticiones)
 TIMEOUT_PETICION = 5
 
 
