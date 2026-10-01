@@ -23,6 +23,7 @@ ORDEN_MODULOS = [
     ("metodos_http", "metodos_http"),
     ("autenticacion", "autenticacion"),
     ("agente_ia", "agente_pentesting"),
+    ("rate_limit", "rate_limit"),   # de ultimo: por si el server bloquea la IP tras la rafaga
 ]
 
 
