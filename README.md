@@ -1,13 +1,13 @@
 # Herramienta de Auditoría de Seguridad Web (OWASP Top 10)
 
 Herramienta de auditoría de seguridad web que combina módulos de escaneo
-automático (cabeceras HTTP, cookies, TLS/SSL, puertos, nmap, sqlmap, nuclei,
-crawler y más) con un **agente de pentesting basado en un modelo de lenguaje
-local**. Los módulos generan un reporte preliminar de posibles vulnerabilidades
-y, a partir de él, el agente decide sobre cuáles profundizar y ejecuta pruebas
-activas dentro de límites de seguridad estrictos. El resultado es un reporte de
-hallazgos (HTML/PDF) mapeado al OWASP Top 10. Todo corre en local, sin APIs de
-pago ni claves en la nube.
+automático (cabeceras HTTP, cookies, TLS/SSL, susceptibilidad a downgrade HTTPS,
+puertos, nmap, sqlmap, nuclei, crawler y más) con un **agente de pentesting
+basado en un modelo de lenguaje (desplegable en la nube o en local con Ollama)**.
+Los módulos generan un reporte preliminar de posibles vulnerabilidades y, a
+partir de él, el agente planifica objetivos y ejecuta pruebas activas dentro de
+límites de seguridad estrictos. El resultado es un reporte de hallazgos
+(HTML/PDF) mapeado al OWASP Top 10.
 
 > **Uso ético y legal.** Solo debes auditar sistemas propios o para los que
 > tengas autorización explícita. La herramienta no se ejecuta si
@@ -38,12 +38,12 @@ Común a cualquier instalación:
   https://ollama.com. Si vas a usar un **modelo en la nube** (ver la sección
   "Modelo del agente" más abajo), NO necesitas Ollama.
 
-Si usas **Docker (Opción A, recomendada)**, no necesitas nada más. Nmap, SQLmap,
+Si usas **Docker (Opción A o B)**, no necesitas nada más. Nmap, SQLmap,
 Nuclei, ZAP y Playwright ya vienen preinstalados dentro de la imagen.
 
 - **Docker Desktop:** https://www.docker.com/products/docker-desktop/
 
-Si usas la **instalación manual (Opción B)**, necesitas además:
+Si usas la **instalación manual (Opción C)**, necesitas además:
 
 - **Python 3.12+**
 - Herramientas de sistema según los módulos que actives: `nmap`, `sqlmap`,
@@ -286,7 +286,8 @@ Pulsa el botón **"Iniciar auditoría"**. Verás:
 
 Al finalizar, la interfaz mostrará:
 
-- **Resumen de riesgo global** con puntuación de 0 a 10.
+- **Resumen de riesgo global** con puntuación de 0 a 10 (y su equivalente sobre 25,
+  la escala de la matriz de riesgo).
 - **Tabla de hallazgos** clasificados por severidad y categoría OWASP.
 - **Botones de descarga** para el reporte en formato HTML y PDF.
 - **Video de la sesión** del agente de IA (si usó el navegador).
