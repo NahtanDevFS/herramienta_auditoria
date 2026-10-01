@@ -96,35 +96,11 @@ def ejecutar(config: dict, logger: logging.Logger) -> list[Hallazgo]:
         logger.error(f"[transporte_https] No se pudo conectar por HTTPS: {e}")
         return hallazgos
 
-    # 2) HSTS ausente -> el navegador no impedira el downgrade.
-    # Nota: el modulo cabeceras_http tambien avisa de HSTS ausente de forma
-    # generica. Aqui lo enmarcamos especificamente en el riesgo de downgrade.
-    if "Strict-Transport-Security" not in r_https.headers:
-        hallazgos.append(Hallazgo(
-            titulo="Sin HSTS: nada impide el downgrade a HTTP",
-            categoria="A02",
-            severidad="media",
-            descripcion=(
-                "La respuesta HTTPS no incluye Strict-Transport-Security (HSTS). "
-                "HSTS es el mecanismo que ordena al navegador usar siempre HTTPS y "
-                "rechazar HTTP en texto claro. Sin el, un atacante puede forzar la "
-                "primera conexion por HTTP e iniciar un downgrade."
-            ),
-            cvss=5.3,
-            evidencia=(
-                f"GET {objetivo} (HTTP {r_https.status_code}) -> la respuesta no "
-                f"incluye la cabecera 'Strict-Transport-Security'."
-            ),
-            recomendacion=(
-                "Enviar 'Strict-Transport-Security: max-age=31536000; "
-                "includeSubDomains; preload' en todas las respuestas HTTPS."
-            ),
-            herramienta_origen=ORIGEN,
-            url_afectada=objetivo,
-        ))
-        logger.info("[transporte_https] HSTS ausente.")
+    # Nota: el HSTS ausente NO se reporta aqui para no duplicar: ya lo cubre el
+    # modulo cabeceras_http. Este modulo se centra en lo que aquel no ve:
+    # la redireccion HTTP->HTTPS (arriba) y el contenido mixto (abajo).
 
-    # 3) contenido mixto: recursos http:// dentro de la pagina HTTPS
+    # 2) contenido mixto: recursos http:// dentro de la pagina HTTPS
     try:
         cuerpo = r_https.text or ""
     except Exception:

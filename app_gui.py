@@ -415,6 +415,9 @@ with st.sidebar:
     ventana_pensamiento = True
     cred_usuario = ""
     cred_contrasena = ""
+    auth_url_login = ""
+    auth_campo_user = "username"
+    auth_campo_pass = "password"
     limite_acciones_agente = 20
     timeout_agente = 600
     if modulos_activos.get("agente_ia"):
@@ -467,6 +470,22 @@ with st.sidebar:
             "El agente solo actua dentro del dominio del objetivo, no ejecuta "
             "acciones destructivas y se detiene al llegar al limite o al timeout."
         )
+
+    # modulo Autenticacion (A07): solo para login de FORMULARIO clasico (no SPA)
+    if modulos_activos.get("autenticacion"):
+        st.divider()
+        st.subheader("Modulo Autenticacion (login de formulario)")
+        st.caption(
+            "Solo para sitios con login de FORMULARIO clasico (no SPA). Deja la URL "
+            "vacia para SPAs: el modulo se omite solo. Prueba rate limiting, "
+            "enumeracion de usuarios, login sobre HTTP y flags de cookie (con datos "
+            "falsos, no usa tu contrasena).")
+        auth_url_login = st.text_input(
+            "URL del login (donde se envia el formulario)", value="",
+            help="Ej. https://sitio.com/login . Vacio = no se ejecuta este modulo.")
+        auth_campo_user = st.text_input("Nombre del campo usuario", value="username",
+                                        help="Para logins por email suele ser 'email'.")
+        auth_campo_pass = st.text_input("Nombre del campo contraseña", value="password")
 
     st.divider()
     autorizado = st.checkbox(
@@ -521,6 +540,15 @@ if lanzar:
         "crawler": {"max_paginas": 50, "max_profundidad": 3},
         "sqlmap": {"urls": [], "level": 1, "risk": 1, "timeout": 180},
         "rate_limit": {"peticiones": 100},
+        "autenticacion": {
+            # si url_login esta vacio, el modulo se omite solo (caso SPA)
+            "url_login": auth_url_login.strip(),
+            "campo_usuario": auth_campo_user.strip() or "username",
+            "campo_password": auth_campo_pass.strip() or "password",
+            # el correo de las credenciales sirve como 'usuario valido' para la
+            # prueba de enumeracion; si no hay, la enumeracion se salta sola
+            "usuario_valido": cred_usuario.strip(),
+        },
 
         "agente_ia": {
             "activo": modulos_activos.get("agente_ia", False),
