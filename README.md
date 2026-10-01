@@ -110,6 +110,24 @@ Entra a http://localhost:8501, activa el agente de IA y elige **"Nube"**. La Bas
 URL y la API key ya vienen de las variables de entorno del paso 3. La clave nunca
 se guarda en el código.
 
+#### 5. (Opcional) Habilitar tambien el modelo local en el mismo contenedor
+
+Con el comando del paso 3 funciona la modalidad **nube**. Si ademas quieres poder
+elegir el modelo **local (Ollama)** desde la misma interfaz, el contenedor necesita
+saber donde esta tu Ollama. Dos requisitos previos en tu PC: Ollama escuchando en
+todas las interfaces (`OLLAMA_HOST=0.0.0.0`, ver Opción B) y el modelo descargado
+(`ollama pull jonathanFS/pentest-owasp`). Luego levanta con este comando, que deja
+disponibles **ambas modalidades** (eliges cual en la interfaz):
+
+```bash
+docker run --rm -it -p 8501:8501 -p 8080:8080 --add-host=host.docker.internal:host-gateway -e LLM_BASE_URL=https://TU-ENDPOINT/v1 -e LLM_API_KEY=TU_CLAVE -e OLLAMA_HOST=http://host.docker.internal:11434 auditoria_web
+```
+
+La variable `OLLAMA_HOST=http://host.docker.internal:11434` apunta al Ollama de tu
+maquina (dentro del contenedor, `localhost` es el propio contenedor, no tu PC). En
+la interfaz, para el modelo local elige **"Local (Ollama)"**; para el de la nube,
+**"Nube"**.
+
 ### Opción B: Docker + modelo local (Ollama)
 
 La herramienta y el modelo corren en tu propia máquina. Requiere Ollama.

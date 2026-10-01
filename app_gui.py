@@ -417,9 +417,9 @@ with st.sidebar:
         st.subheader("Agente de IA")
         modo = st.radio(
             "Dónde corre el modelo",
-            ["Local (Ollama)", "Nube (endpoint OpenAI-compatible)"],
-            help="Local usa tu Ollama. Nube usa un endpoint como vLLM en Modal.")
-        if modo.startswith("Nube"):
+            ["Modelo en la nube (Modal)", "Local (Ollama)"],
+            help="Nube usa un endpoint como vLLM en Modal (por defecto). Local usa tu Ollama.")
+        if "nube" in modo.lower():
             proveedor_llm = "openai"
             base_url_llm = st.text_input(
                 "Base URL del endpoint (termina en /v1)",
