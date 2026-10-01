@@ -411,6 +411,7 @@ with st.sidebar:
     cred_contrasena = ""
     limite_acciones_agente = 20
     timeout_agente = 600
+    probar_rate_limit = False
     if modulos_activos.get("agente_ia"):
         st.divider()
         st.subheader("Agente de IA")
@@ -457,6 +458,12 @@ with st.sidebar:
                                                  min_value=1, max_value=50, value=20)
         timeout_agente = st.number_input("Timeout de sesion (segundos)",
                                          min_value=60, max_value=1800, value=600, step=60)
+        probar_rate_limit = st.checkbox(
+            "Probar limite de tasa (rate limiting)", value=False,
+            help="Al FINAL de la auditoria, el agente envia una rafaga ACOTADA de "
+                 "peticiones (30) a un endpoint para ver si el servidor las limita "
+                 "(429/503). No es un DoS: es una prueba bounded y se hace de ultimo "
+                 "por si el servidor bloquea la IP.")
         st.caption(
             "El agente solo actua dentro del dominio del objetivo, no ejecuta "
             "acciones destructivas y se detiene al llegar al limite o al timeout."
@@ -528,6 +535,7 @@ if lanzar:
             "contrasena": cred_contrasena,
             "limite_acciones": limite_acciones_agente,
             "timeout_sesion_seg": timeout_agente,
+            "probar_rate_limit": probar_rate_limit,
             # dejar el navegador abierto al terminar (solo tiene sentido si es visible)
             "mantener_navegador_abierto": bool(
                 modulos_activos.get("agente_ia") and usar_navegador and abrir_ventana),
