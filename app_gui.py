@@ -281,6 +281,15 @@ def _panel_en_curso():
             st.session_state["video_agente"] = resultado.get("video")
         else:
             st.session_state["error_auditoria"] = resultado.get("error", "desconocido")
+        # guarda el log completo para mostrarlo en los resultados (persiste hasta una
+        # nueva auditoria o recarga), antes de que _limpiar_estado borre ruta_log
+        _rl = st.session_state.get("ruta_log")
+        if _rl and os.path.isfile(_rl):
+            try:
+                with open(_rl, encoding="utf-8") as _f:
+                    st.session_state["log_final"] = _f.read()
+            except Exception:
+                pass
         # mantiene el handle del navegador abierto para cerrarlo despues
         cfg_ag = (st.session_state.get("config_auditoria", {}) or {}).get("agente_ia", {})
         if cfg_ag.get("mantener_navegador_abierto") and proc is not None and proc.is_alive():
@@ -542,7 +551,8 @@ if lanzar:
     st.session_state.mostrar_monitor = bool(
         modulos_activos.get("agente_ia") and usar_navegador and abrir_ventana)
     # limpia resultados de auditoria previa
-    for k in ("datos_reporte", "rutas_informe", "video_agente", "error_auditoria"):
+    for k in ("datos_reporte", "rutas_informe", "video_agente", "error_auditoria",
+              "log_final"):
         st.session_state.pop(k, None)
     st.session_state.auditoria_en_curso = True
     st.rerun()
@@ -579,6 +589,19 @@ if "datos_reporte" in st.session_state and not st.session_state.get("auditoria_e
 
     st.divider()
     st.header("Resultados")
+
+    # terminal de la auditoria (log completo): persiste hasta una nueva auditoria o recarga
+    _log_fin = st.session_state.get("log_final")
+    if _log_fin:
+        with st.expander("Terminal de la auditoria (log completo)", expanded=False):
+            import html as _html
+            import streamlit.components.v1 as _components
+            _components.html(
+                f"""<div style="height:320px; overflow-y:auto; background:#0e1117;
+                     color:#e6edf3; font-family:Consolas,Menlo,monospace; font-size:12px;
+                     line-height:1.45; padding:10px; border-radius:6px; white-space:pre-wrap;
+                     word-break:break-word; border:1px solid #30363d;">{_html.escape(_log_fin)}</div>""",
+                height=340)
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Total hallazgos", meta["total_hallazgos"])
