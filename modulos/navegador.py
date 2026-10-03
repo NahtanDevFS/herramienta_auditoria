@@ -134,10 +134,15 @@ class NavegadorAgente:
         self._descartar_overlays()
         campo_user = self._encontrar([
             "input[type=email]", "input[name*=email i]", "input[id*=email i]",
-            "input[name*=user i]", "input[id*=user i]", "input[type=text]",
+            "input[name*=user i]", "input[id*=user i]",
+            "input[placeholder*=correo i]", "input[placeholder*=email i]",
+            "input[placeholder*=usuario i]", "input[placeholder*=user i]",
+            "input[type=text]", "input:not([type])",
         ])
         campo_pass = self._encontrar([
             "input[type=password]", "input[name*=pass i]", "input[id*=pass i]",
+            "input[placeholder*=contrase i]", "input[placeholder*=password i]",
+            "input[placeholder*=clave i]",
         ])
         if not campo_user or not campo_pass:
             return {"ok": False, "error": "No se encontro el formulario de login."}
@@ -293,10 +298,15 @@ class NavegadorAgente:
         self._descartar_overlays()
         campo_user = self._encontrar([
             "input[type=email]", "input[name*=email i]", "input[id*=email i]",
-            "input[name*=user i]", "input[id*=user i]", "input[type=text]",
+            "input[name*=user i]", "input[id*=user i]",
+            "input[placeholder*=correo i]", "input[placeholder*=email i]",
+            "input[placeholder*=usuario i]", "input[placeholder*=user i]",
+            "input[type=text]", "input:not([type])",
         ])
         campo_pass = self._encontrar([
             "input[type=password]", "input[name*=pass i]", "input[id*=pass i]",
+            "input[placeholder*=contrase i]", "input[placeholder*=password i]",
+            "input[placeholder*=clave i]",
         ])
         if not campo_user or not campo_pass:
             return {"ok": False, "autenticado": False,
@@ -339,10 +349,15 @@ class NavegadorAgente:
         url_login = self._page.url   # URL donde se prueba (antes del redirect)
         campo_user = self._encontrar([
             "input[type=email]", "input[name*=email i]", "input[id*=email i]",
-            "input[name*=user i]", "input[id*=user i]", "input[type=text]",
+            "input[name*=user i]", "input[id*=user i]",
+            "input[placeholder*=correo i]", "input[placeholder*=email i]",
+            "input[placeholder*=usuario i]", "input[placeholder*=user i]",
+            "input[type=text]", "input:not([type])",
         ])
         campo_pass = self._encontrar([
             "input[type=password]", "input[name*=pass i]", "input[id*=pass i]",
+            "input[placeholder*=contrase i]", "input[placeholder*=password i]",
+            "input[placeholder*=clave i]",
         ])
         if not campo_user or not campo_pass:
             self._captura("login: campos no encontrados")
